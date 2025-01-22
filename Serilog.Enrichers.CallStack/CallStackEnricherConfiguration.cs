@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Serilog.Enrichers.CallStack;
 
 /// <summary>
-/// Configuration for the CallStackEnricher.
+/// Configuration for the CallStackEnricher with enhanced fluent API.
 /// </summary>
 public class CallStackEnricherConfiguration
 {
