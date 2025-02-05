@@ -57,6 +57,7 @@ public class CallStackEnricher : ILogEventEnricher
         catch (Exception ex) when (_configuration.SuppressExceptions)
         {
             // Silently ignore exceptions when configured to do so
+            _configuration.OnException?.Invoke(ex);
             if (_configuration.OnException != null)
             {
                 try
