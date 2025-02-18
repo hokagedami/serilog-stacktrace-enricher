@@ -4,7 +4,7 @@ using Serilog.Events;
 namespace Serilog.Enrichers.CallStack.Tests;
 
 /// <summary>
-/// Test helper class for creating log event properties.
+/// Test helper class for creating log event properties with enhanced functionality.
 /// </summary>
 public class PropertyFactory : ILogEventPropertyFactory
 {
