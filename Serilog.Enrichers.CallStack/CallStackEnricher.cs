@@ -45,6 +45,10 @@ public class CallStackEnricher : ILogEventEnricher
             var stackTrace = new StackTrace(true);
             var frames = stackTrace.GetFrames();
             
+            // Performance optimization: early exit if no frames
+            if (frames?.Length == 0)
+                return;
+            
             if (frames == null || frames.Length == 0)
                 return;
 
