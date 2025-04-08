@@ -293,3 +293,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - Comprehensive configuration options
 - Full test coverage
 - Documentation and examples
+- Performance optimizations for high-throughput scenarios
