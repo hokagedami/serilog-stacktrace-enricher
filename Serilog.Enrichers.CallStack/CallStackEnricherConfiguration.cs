@@ -125,6 +125,7 @@ public class CallStackEnricherConfiguration
 
     /// <summary>
     /// Gets the collection of namespaces to skip when walking the stack trace.
+    /// Default includes common system namespaces for better performance.
     /// </summary>
     public ICollection<string> SkipNamespaces { get; } = new HashSet<string>(StringComparer.Ordinal);
 
