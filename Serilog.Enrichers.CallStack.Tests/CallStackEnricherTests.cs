@@ -13,6 +13,7 @@ public class CallStackEnricherTests
     public void Enrich_WithDefaultConfiguration_AddsCallStackProperties()
     {
         // Arrange
+        InMemorySink.Instance.LogEvents.Clear(); // Ensure clean state
         using var logger = new LoggerConfiguration()
             .Enrich.WithCallStack()
             .WriteTo.InMemory()
