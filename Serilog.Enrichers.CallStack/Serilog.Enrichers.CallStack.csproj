@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
     <PackageId>Serilog.Enrichers.CallStack</PackageId>
     <PackageVersion>1.0.0</PackageVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
     <Authors>Mike D</Authors>
     <Description>A Serilog enricher that adds call stack information to log events, including method names, file names, and line numbers.</Description>
     <PackageTags>serilog;enricher;callstack;logging;diagnostics</PackageTags>
