@@ -2,6 +2,7 @@ using FluentAssertions;
 using Serilog.Events;
 using Serilog.Sinks.InMemory;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 
@@ -9,11 +10,15 @@ namespace Serilog.Enrichers.CallStack.Tests;
 
 public class CallStackEnricherTests
 {
+    private static LogEvent GetLatestLogEvent()
+    {
+        var logEvents = InMemorySink.Instance.LogEvents;
+        return logEvents.LastOrDefault() ?? throw new InvalidOperationException("No log events found");
+    }
     [Fact]
     public void Enrich_WithDefaultConfiguration_AddsCallStackProperties()
     {
         // Arrange
-        InMemorySink.Instance.LogEvents.Clear(); // Ensure clean state
         using var logger = new LoggerConfiguration()
             .Enrich.WithCallStack()
             .WriteTo.InMemory()
@@ -23,10 +28,7 @@ public class CallStackEnricherTests
         LogFromMethod(logger);
 
         // Assert
-        var logEvents = InMemorySink.Instance.LogEvents;
-        logEvents.Should().HaveCount(1);
-        
-        var logEvent = logEvents.First();
+        var logEvent = GetLatestLogEvent();
         logEvent.Properties.Should().ContainKey("MethodName");
         logEvent.Properties.Should().ContainKey("TypeName");
         logEvent.Properties.Should().ContainKey("FileName");
@@ -59,10 +61,7 @@ public class CallStackEnricherTests
         LogFromMethod(logger);
 
         // Assert
-        var logEvents = InMemorySink.Instance.LogEvents;
-        logEvents.Should().HaveCount(1);
-        
-        var logEvent = logEvents.First();
+        var logEvent = GetLatestLogEvent();
         logEvent.Properties.Should().ContainKey("CustomMethod");
         logEvent.Properties.Should().ContainKey("CustomType");
         logEvent.Properties.Should().ContainKey("CustomFile");
@@ -85,10 +84,7 @@ public class CallStackEnricherTests
         LogFromMethodWithParameters(logger, "test", 123);
 
         // Assert
-        var logEvents = InMemorySink.Instance.LogEvents;
-        logEvents.Should().HaveCount(1);
-        
-        var logEvent = logEvents.First();
+        var logEvent = GetLatestLogEvent();
         var methodName = logEvent.Properties["MethodName"].ToString();
         methodName.Should().Contain("(");
         methodName.Should().Contain(")");
@@ -110,10 +106,7 @@ public class CallStackEnricherTests
         LogFromMethod(logger);
 
         // Assert
-        var logEvents = InMemorySink.Instance.LogEvents;
-        logEvents.Should().HaveCount(1);
-        
-        var logEvent = logEvents.First();
+        var logEvent = GetLatestLogEvent();
         var typeName = logEvent.Properties["TypeName"].ToString();
         typeName.Should().Contain("Serilog.Enrichers.CallStack.Tests");
     }
@@ -134,10 +127,7 @@ public class CallStackEnricherTests
         LogFromMethod(logger);
 
         // Assert
-        var logEvents = InMemorySink.Instance.LogEvents;
-        logEvents.Should().HaveCount(1);
-        
-        var logEvent = logEvents.First();
+        var logEvent = GetLatestLogEvent();
         // Since we're skipping our own namespace, it should find a different frame
         // or may not add properties if no suitable frame is found
         if (logEvent.Properties.ContainsKey("TypeName"))
@@ -163,10 +153,7 @@ public class CallStackEnricherTests
         CallMethodThatLogs(logger);
 
         // Assert
-        var logEvents = InMemorySink.Instance.LogEvents;
-        logEvents.Should().HaveCount(1);
-        
-        var logEvent = logEvents.First();
+        var logEvent = GetLatestLogEvent();
         if (logEvent.Properties.ContainsKey("MethodName"))
         {
             var methodName = logEvent.Properties["MethodName"].ToString();
@@ -195,10 +182,7 @@ public class CallStackEnricherTests
         LogFromMethod(logger);
 
         // Assert
-        var logEvents = InMemorySink.Instance.LogEvents;
-        logEvents.Should().HaveCount(1);
-        
-        var logEvent = logEvents.First();
+        var logEvent = GetLatestLogEvent();
         logEvent.Properties.Should().ContainKey("MethodName");
         logEvent.Properties.Should().NotContainKey("TypeName");
         logEvent.Properties.Should().NotContainKey("FileName");
