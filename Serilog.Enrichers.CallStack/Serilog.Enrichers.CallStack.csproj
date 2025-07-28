@@ -4,24 +4,36 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
+    <!-- Package Identity -->
     <PackageId>Serilog.Enrichers.CallStack</PackageId>
-    <PackageVersion>1.0.0</PackageVersion>
+    <Version>1.0.0</Version>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
-    <Authors>Mike D</Authors>
-    <Description>A Serilog enricher that adds call stack information to log events, including method names, file names, and line numbers.</Description>
-    <PackageTags>serilog;enricher;callstack;logging;diagnostics</PackageTags>
+    
+    <!-- Package Metadata -->
+    <Authors>Michael Akinyemi</Authors>
+    <Company>Michael Akinyemi</Company>
+    <Product>Serilog CallStack Enricher</Product>
+    <Description>A Serilog enricher that adds call stack information to log events, including method names, file names, and line numbers. Helps with debugging and tracing by providing detailed context about where log events originated.</Description>
+    <PackageTags>serilog;enricher;callstack;logging;diagnostics;debugging;tracing</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <RepositoryUrl>https://github.com/miked/SerilogCallStackEnricher</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/hokagedami/serilog-stacktrace-enricher</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/hokagedami/serilog-stacktrace-enricher</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageReleaseNotes>Production ready release with comprehensive call stack enrichment functionality.</PackageReleaseNotes>
+    
+    <!-- Build Configuration -->
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Serilog" Version="3.0.1" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>
