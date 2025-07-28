@@ -52,11 +52,23 @@ public class CallStackEnricher : ILogEventEnricher
             if (frames == null || frames.Length == 0)
                 return;
 
-            var relevantFrame = FindRelevantFrame(frames);
-            if (relevantFrame == null)
-                return;
+            if (_configuration.UseExceptionLikeFormat)
+            {
+                var callStackString = BuildCallStackString(frames);
+                if (!string.IsNullOrEmpty(callStackString))
+                {
+                    var property = propertyFactory.CreateProperty(_configuration.CallStackPropertyName, callStackString);
+                    logEvent.AddPropertyIfAbsent(property);
+                }
+            }
+            else
+            {
+                var relevantFrame = FindRelevantFrame(frames);
+                if (relevantFrame == null)
+                    return;
 
-            AddCallStackProperties(logEvent, propertyFactory, relevantFrame);
+                AddCallStackProperties(logEvent, propertyFactory, relevantFrame);
+            }
         }
         catch (Exception ex) when (_configuration.SuppressExceptions)
         {
@@ -304,5 +316,97 @@ public class CallStackEnricher : ILogEventEnricher
                 : $"{p.ParameterType.Name} {p.Name}");
 
         return $"{method.Name}({string.Join(", ", parameterNames)})";
+    }
+
+    /// <summary>
+    /// Builds an exception-like call stack string from stack frames.
+    /// </summary>
+    /// <param name="frames">The stack frames to process.</param>
+    /// <returns>A formatted call stack string.</returns>
+    private string BuildCallStackString(StackFrame[] frames)
+    {
+        var relevantFrames = frames
+            .Where(frame => !ShouldSkipFrame(frame))
+            .ToArray();
+
+        if (relevantFrames.Length == 0)
+        {
+            // Fallback to non-skipped frames if all were filtered
+            relevantFrames = frames
+                .Where(frame => !ShouldSkipEnricherFrame(frame))
+                .ToArray();
+        }
+
+        if (relevantFrames.Length == 0)
+            return string.Empty;
+
+        // Apply frame offset
+        var startIndex = Math.Min(_configuration.FrameOffset, relevantFrames.Length - 1);
+        relevantFrames = relevantFrames.Skip(startIndex).ToArray();
+
+        // Limit the number of frames
+        if (_configuration.MaxFrames > 0 && relevantFrames.Length > _configuration.MaxFrames)
+        {
+            relevantFrames = relevantFrames.Take(_configuration.MaxFrames).ToArray();
+        }
+
+        var callStackParts = new List<string>();
+        
+        foreach (var frame in relevantFrames)
+        {
+            var frameString = FormatStackFrame(frame);
+            if (!string.IsNullOrEmpty(frameString))
+            {
+                callStackParts.Add(frameString);
+            }
+        }
+
+        return callStackParts.Count > 0 ? string.Join(" --> ", callStackParts) : string.Empty;
+    }
+
+    /// <summary>
+    /// Formats a single stack frame into a string representation.
+    /// </summary>
+    /// <param name="frame">The stack frame to format.</param>
+    /// <returns>A formatted string representing the stack frame.</returns>
+    private string FormatStackFrame(StackFrame frame)
+    {
+        var method = frame.GetMethod();
+        if (method == null)
+            return string.Empty;
+
+        var parts = new List<string>();
+
+        // Add type and method name
+        if (_configuration.IncludeTypeName && method.DeclaringType != null)
+        {
+            var typeName = _configuration.UseFullTypeName 
+                ? method.DeclaringType.FullName ?? method.DeclaringType.Name
+                : method.DeclaringType.Name;
+            
+            var methodName = GetMethodName(method);
+            parts.Add($"{typeName}.{methodName}");
+        }
+        else if (_configuration.IncludeMethodName)
+        {
+            var methodName = GetMethodName(method);
+            parts.Add(methodName);
+        }
+
+        // Add line number if available and configured
+        if (_configuration.IncludeLineNumber)
+        {
+            var lineNumber = frame.GetFileLineNumber();
+            if (lineNumber > 0)
+            {
+                var lastPart = parts.LastOrDefault();
+                if (!string.IsNullOrEmpty(lastPart))
+                {
+                    parts[parts.Count - 1] = $"{lastPart}:{lineNumber}";
+                }
+            }
+        }
+
+        return parts.Count > 0 ? string.Join(" ", parts) : string.Empty;
     }
 }

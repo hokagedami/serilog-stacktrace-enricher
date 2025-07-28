@@ -111,6 +111,27 @@ public class CallStackEnricherConfiguration
     public int FrameOffset { get; set; } = 0;
 
     /// <summary>
+    /// Gets or sets the maximum number of call stack frames to include in the formatted call stack.
+    /// Default is 5. Set to -1 for unlimited frames.
+    /// </summary>
+    public int MaxFrames { get; set; } = 5;
+
+    /// <summary>
+    /// Gets or sets whether to use the new exception-like call stack format.
+    /// When true, outputs a single "CallStack" property with formatted call stack.
+    /// When false, uses the legacy format with separate properties.
+    /// Default is true.
+    /// </summary>
+    public bool UseExceptionLikeFormat { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the property name for the formatted call stack.
+    /// Only used when UseExceptionLikeFormat is true.
+    /// Default is "CallStack".
+    /// </summary>
+    public string CallStackPropertyName { get; set; } = "CallStack";
+
+    /// <summary>
     /// Gets or sets whether to suppress exceptions that occur during enrichment.
     /// Default is true.
     /// </summary>
@@ -278,6 +299,25 @@ public class CallStackEnricherConfiguration
     {
         IncludeMethodParameters = includeParameters;
         UseFullParameterTypes = useFullParameterTypes;
+        return this;
+    }
+
+    /// <summary>
+    /// Configures the call stack format and depth.
+    /// </summary>
+    /// <param name="useExceptionLikeFormat">Whether to use exception-like format (single CallStack property).</param>
+    /// <param name="maxFrames">Maximum number of frames to include (-1 for unlimited).</param>
+    /// <param name="callStackPropertyName">Property name for the call stack.</param>
+    /// <returns>This configuration instance for method chaining.</returns>
+    public CallStackEnricherConfiguration WithCallStackFormat(
+        bool useExceptionLikeFormat = true,
+        int maxFrames = 5,
+        string? callStackPropertyName = null)
+    {
+        UseExceptionLikeFormat = useExceptionLikeFormat;
+        MaxFrames = maxFrames;
+        if (!string.IsNullOrEmpty(callStackPropertyName))
+            CallStackPropertyName = callStackPropertyName;
         return this;
     }
 }
