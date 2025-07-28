@@ -15,7 +15,7 @@ public class CallStackEnricherTests
         return logEvents.LastOrDefault() ?? throw new InvalidOperationException("No log events found");
     }
     [Fact]
-    public void Enrich_WithDefaultConfiguration_AddsCallStackProperties()
+    public void Enrich_WithDefaultConfiguration_AddsCallStackProperty()
     {
         // Arrange
         using var logger = new LoggerConfiguration()
@@ -28,16 +28,12 @@ public class CallStackEnricherTests
 
         // Assert
         var logEvent = GetLatestLogEvent();
-        logEvent.Properties.Should().ContainKey("MethodName");
-        logEvent.Properties.Should().ContainKey("TypeName");
+        logEvent.Properties.Should().ContainKey("CallStack");
         
-        // File and line info may not be available in test environments
-        // but method and type should always be present
-        var methodName = logEvent.Properties["MethodName"].ToString();
-        methodName.Should().NotBeNullOrEmpty();
-        
-        var typeName = logEvent.Properties["TypeName"].ToString();
-        typeName.Should().NotBeNullOrEmpty();
+        // Call stack should be in exception-like format
+        var callStack = logEvent.Properties["CallStack"].ToString();
+        callStack.Should().NotBeNullOrEmpty();
+        callStack.Should().Contain("-->"); // Should contain frame separator
     }
 
     [Fact]
@@ -45,6 +41,7 @@ public class CallStackEnricherTests
     {
         // Arrange
         var config = new CallStackEnricherConfiguration()
+            .WithCallStackFormat(useExceptionLikeFormat: false) // Use legacy format for this test
             .WithPropertyNames(
                 methodName: "CustomMethod",
                 typeName: "CustomType",
@@ -86,9 +83,9 @@ public class CallStackEnricherTests
 
         // Assert
         var logEvent = GetLatestLogEvent();
-        var methodName = logEvent.Properties["MethodName"].ToString();
-        methodName.Should().Contain("(");
-        methodName.Should().Contain(")");
+        var callStack = logEvent.Properties["CallStack"].ToString();
+        callStack.Should().Contain("(");
+        callStack.Should().Contain(")");
     }
 
     [Fact]
@@ -108,10 +105,10 @@ public class CallStackEnricherTests
 
         // Assert
         var logEvent = GetLatestLogEvent();
-        var typeName = logEvent.Properties["TypeName"].ToString();
-        typeName.Should().NotBeNullOrEmpty();
+        var callStack = logEvent.Properties["CallStack"].ToString();
+        callStack.Should().NotBeNullOrEmpty();
         // With fullTypeName enabled, should include namespace info
-        typeName.Should().Contain(".");
+        callStack.Should().Contain(".");
     }
 
     [Fact]
@@ -170,6 +167,7 @@ public class CallStackEnricherTests
     {
         // Arrange
         var config = new CallStackEnricherConfiguration()
+            .WithCallStackFormat(useExceptionLikeFormat: false) // Use legacy format for this test
             .WithIncludes(
                 methodName: true,
                 typeName: false,
@@ -293,5 +291,124 @@ public class CallStackEnricherTests
     private static void CallMethodThatLogs(ILogger logger)
     {
         LogFromMethod(logger);
+    }
+
+    [Fact]
+    public void Enrich_WithExceptionLikeFormat_AddsCallStackProperty()
+    {
+        // Arrange
+        var config = new CallStackEnricherConfiguration()
+            .WithCallStackFormat(useExceptionLikeFormat: true, maxFrames: 3);
+        
+        using var logger = new LoggerConfiguration()
+            .Enrich.WithCallStack(config)
+            .WriteTo.InMemory()
+            .CreateLogger();
+
+        // Act
+        LogFromMethod(logger);
+
+        // Assert
+        var logEvent = GetLatestLogEvent();
+        logEvent.Properties.Should().ContainKey("CallStack");
+        
+        var callStack = logEvent.Properties["CallStack"].ToString();
+        callStack.Should().NotBeNullOrEmpty();
+        callStack.Should().Contain("-->"); // Should contain frame separator
+    }
+
+    [Fact]
+    public void Enrich_WithLegacyFormat_AddsIndividualProperties()
+    {
+        // Arrange
+        var config = new CallStackEnricherConfiguration()
+            .WithCallStackFormat(useExceptionLikeFormat: false);
+        
+        using var logger = new LoggerConfiguration()
+            .Enrich.WithCallStack(config)
+            .WriteTo.InMemory()
+            .CreateLogger();
+
+        // Act
+        LogFromMethod(logger);
+
+        // Assert
+        var logEvent = GetLatestLogEvent();
+        logEvent.Properties.Should().ContainKey("MethodName");
+        logEvent.Properties.Should().ContainKey("TypeName");
+        logEvent.Properties.Should().NotContainKey("CallStack");
+    }
+
+    [Fact]
+    public void Enrich_WithMaxFramesLimit_LimitsCallStackDepth()
+    {
+        // Arrange
+        var config = new CallStackEnricherConfiguration()
+            .WithCallStackFormat(useExceptionLikeFormat: true, maxFrames: 2);
+        
+        using var logger = new LoggerConfiguration()
+            .Enrich.WithCallStack(config)
+            .WriteTo.InMemory()
+            .CreateLogger();
+
+        // Act
+        CallMultipleMethodsDeep(logger);
+
+        // Assert
+        var logEvent = GetLatestLogEvent();
+        var callStack = logEvent.Properties["CallStack"].ToString();
+        
+        // Count the number of frame separators (should be maxFrames - 1)
+        var separatorCount = callStack.Split(new[] { " --> " }, StringSplitOptions.None).Length - 1;
+        separatorCount.Should().BeLessOrEqualTo(1); // 2 frames = 1 separator
+    }
+
+    [Fact]
+    public void Enrich_WithCustomCallStackPropertyName_UsesCustomName()
+    {
+        // Arrange
+        var config = new CallStackEnricherConfiguration()
+            .WithCallStackFormat(useExceptionLikeFormat: true, callStackPropertyName: "CustomCallStack");
+        
+        using var logger = new LoggerConfiguration()
+            .Enrich.WithCallStack(config)
+            .WriteTo.InMemory()
+            .CreateLogger();
+
+        // Act
+        LogFromMethod(logger);
+
+        // Assert
+        var logEvent = GetLatestLogEvent();
+        logEvent.Properties.Should().ContainKey("CustomCallStack");
+        logEvent.Properties.Should().NotContainKey("CallStack");
+    }
+
+    [Fact]
+    public void Enrich_WithMethodParametersInExceptionFormat_IncludesParameters()
+    {
+        // Arrange
+        var config = new CallStackEnricherConfiguration()
+            .WithCallStackFormat(useExceptionLikeFormat: true)
+            .WithMethodParameters(includeParameters: true);
+        
+        using var logger = new LoggerConfiguration()
+            .Enrich.WithCallStack(config)
+            .WriteTo.InMemory()
+            .CreateLogger();
+
+        // Act
+        LogFromMethodWithParameters(logger, "test", 123);
+
+        // Assert
+        var logEvent = GetLatestLogEvent();
+        var callStack = logEvent.Properties["CallStack"].ToString();
+        callStack.Should().Contain("("); // Should contain parameter info
+        callStack.Should().Contain(")");
+    }
+
+    private static void CallMultipleMethodsDeep(ILogger logger)
+    {
+        CallMethodThatLogs(logger);
     }
 }
