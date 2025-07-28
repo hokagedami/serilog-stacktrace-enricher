@@ -89,11 +89,49 @@ public class CallStackEnricher : ILogEventEnricher
             .ToArray();
 
         if (relevantFrames.Length == 0)
+        {
+            // If all frames were skipped, fall back to the first available frame
+            // (excluding the enricher itself)
+            var fallbackFrames = frames
+                .Where(frame => !ShouldSkipEnricherFrame(frame))
+                .ToArray();
+            
+            if (fallbackFrames.Length > 0)
+            {
+                var fallbackIndex = Math.Min(_configuration.FrameOffset, fallbackFrames.Length - 1);
+                return fallbackFrames[fallbackIndex];
+            }
+            
             return null;
+        }
 
         // Return the first non-skipped frame, optionally offset by configuration
         var targetIndex = Math.Min(_configuration.FrameOffset, relevantFrames.Length - 1);
         return relevantFrames[targetIndex];
+    }
+
+    /// <summary>
+    /// Determines whether a stack frame should be skipped for enricher-only filtering.
+    /// </summary>
+    /// <param name="frame">The stack frame to evaluate.</param>
+    /// <returns>True if the frame should be skipped, false otherwise.</returns>
+    private bool ShouldSkipEnricherFrame(StackFrame frame)
+    {
+        var method = frame.GetMethod();
+        if (method == null)
+            return true;
+
+        var declaringType = method.DeclaringType;
+        if (declaringType == null)
+            return true;
+
+        var typeName = declaringType.FullName ?? declaringType.Name;
+
+        // Only skip Serilog infrastructure and this enricher
+        if (typeName.StartsWith("Serilog.", StringComparison.Ordinal))
+            return true;
+
+        return false;
     }
 
     /// <summary>
@@ -119,6 +157,33 @@ public class CallStackEnricher : ILogEventEnricher
 
         // Skip this enricher
         if (typeName.StartsWith("Serilog.Enrichers.CallStack.", StringComparison.Ordinal))
+            return true;
+
+        // Skip reflection and runtime infrastructure
+        if (typeName.StartsWith("System.Reflection.", StringComparison.Ordinal) ||
+            typeName.StartsWith("System.Runtime", StringComparison.Ordinal) ||
+            typeName.StartsWith("System.Threading.", StringComparison.Ordinal) ||
+            typeName.Equals("System.RuntimeMethodHandle", StringComparison.Ordinal) ||
+            typeName.Equals("System.RuntimeType", StringComparison.Ordinal) ||
+            typeName.Contains("Task`1") ||
+            typeName.Contains("TaskScheduler"))
+            return true;
+
+        // Skip xUnit framework
+        if (typeName.StartsWith("Xunit.", StringComparison.Ordinal) ||
+            typeName.StartsWith("Microsoft.Extensions.DependencyInjection.", StringComparison.Ordinal))
+            return true;
+
+        // Skip common method names that are framework-related
+        var methodName = method.Name;
+        if (methodName == "InvokeMethod" || 
+            methodName == "InvokeWithNoArgs" || 
+            methodName == "Invoke" ||
+            methodName == "InternalInvoke" ||
+            methodName == "InnerInvoke" ||
+            methodName == "RunInternal" ||
+            methodName == "Start" ||
+            methodName.StartsWith("MoveNext"))
             return true;
 
         // Skip user-defined namespaces

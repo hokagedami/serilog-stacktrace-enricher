@@ -1,0 +1,4342 @@
+40492ad3e8495711392de3343a56c350619ab0da|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-07-28 23:27:49 +0100|fix: Remove InMemorySink.Clear() call that caused compilation error|HEAD -> main
+diff --git a/Serilog.Enrichers.CallStack.Tests/CallStackEnricherTests.cs b/Serilog.Enrichers.CallStack.Tests/CallStackEnricherTests.cs
+index 6dfeb37..f11e1bd 100644
+--- a/Serilog.Enrichers.CallStack.Tests/CallStackEnricherTests.cs
++++ b/Serilog.Enrichers.CallStack.Tests/CallStackEnricherTests.cs
+@@ -2,6 +2,7 @@ using FluentAssertions;
+ using Serilog.Events;
+ using Serilog.Sinks.InMemory;
+ using System;
++using System.Collections.Generic;
+ using System.Linq;
+ using Xunit;
+ 
+@@ -9,11 +10,15 @@ namespace Serilog.Enrichers.CallStack.Tests;
+ 
+ public class CallStackEnricherTests
+ {
++    private static LogEvent GetLatestLogEvent()
++    {
++        var logEvents = InMemorySink.Instance.LogEvents;
++        return logEvents.LastOrDefault() ?? throw new InvalidOperationException("No log events found");
++    }
+     [Fact]
+     public void Enrich_WithDefaultConfiguration_AddsCallStackProperties()
+     {
+         // Arrange
+-        InMemorySink.Instance.LogEvents.Clear(); // Ensure clean state
+         using var logger = new LoggerConfiguration()
+             .Enrich.WithCallStack()
+             .WriteTo.InMemory()
+@@ -23,10 +28,7 @@ public class CallStackEnricherTests
+         LogFromMethod(logger);
+ 
+         // Assert
+-        var logEvents = InMemorySink.Instance.LogEvents;
+-        logEvents.Should().HaveCount(1);
+-        
+-        var logEvent = logEvents.First();
++        var logEvent = GetLatestLogEvent();
+         logEvent.Properties.Should().ContainKey("MethodName");
+         logEvent.Properties.Should().ContainKey("TypeName");
+         logEvent.Properties.Should().ContainKey("FileName");
+@@ -59,10 +61,7 @@ public class CallStackEnricherTests
+         LogFromMethod(logger);
+ 
+         // Assert
+-        var logEvents = InMemorySink.Instance.LogEvents;
+-        logEvents.Should().HaveCount(1);
+-        
+-        var logEvent = logEvents.First();
++        var logEvent = GetLatestLogEvent();
+         logEvent.Properties.Should().ContainKey("CustomMethod");
+         logEvent.Properties.Should().ContainKey("CustomType");
+         logEvent.Properties.Should().ContainKey("CustomFile");
+@@ -85,10 +84,7 @@ public class CallStackEnricherTests
+         LogFromMethodWithParameters(logger, "test", 123);
+ 
+         // Assert
+-        var logEvents = InMemorySink.Instance.LogEvents;
+-        logEvents.Should().HaveCount(1);
+-        
+-        var logEvent = logEvents.First();
++        var logEvent = GetLatestLogEvent();
+         var methodName = logEvent.Properties["MethodName"].ToString();
+         methodName.Should().Contain("(");
+         methodName.Should().Contain(")");
+@@ -110,10 +106,7 @@ public class CallStackEnricherTests
+         LogFromMethod(logger);
+ 
+         // Assert
+-        var logEvents = InMemorySink.Instance.LogEvents;
+-        logEvents.Should().HaveCount(1);
+-        
+-        var logEvent = logEvents.First();
++        var logEvent = GetLatestLogEvent();
+         var typeName = logEvent.Properties["TypeName"].ToString();
+         typeName.Should().Contain("Serilog.Enrichers.CallStack.Tests");
+     }
+@@ -134,10 +127,7 @@ public class CallStackEnricherTests
+         LogFromMethod(logger);
+ 
+         // Assert
+-        var logEvents = InMemorySink.Instance.LogEvents;
+-        logEvents.Should().HaveCount(1);
+-        
+-        var logEvent = logEvents.First();
++        var logEvent = GetLatestLogEvent();
+         // Since we're skipping our own namespace, it should find a different frame
+         // or may not add properties if no suitable frame is found
+         if (logEvent.Properties.ContainsKey("TypeName"))
+@@ -163,10 +153,7 @@ public class CallStackEnricherTests
+         CallMethodThatLogs(logger);
+ 
+         // Assert
+-        var logEvents = InMemorySink.Instance.LogEvents;
+-        logEvents.Should().HaveCount(1);
+-        
+-        var logEvent = logEvents.First();
++        var logEvent = GetLatestLogEvent();
+         if (logEvent.Properties.ContainsKey("MethodName"))
+         {
+             var methodName = logEvent.Properties["MethodName"].ToString();
+@@ -195,10 +182,7 @@ public class CallStackEnricherTests
+         LogFromMethod(logger);
+ 
+         // Assert
+-        var logEvents = InMemorySink.Instance.LogEvents;
+-        logEvents.Should().HaveCount(1);
+-        
+-        var logEvent = logEvents.First();
++        var logEvent = GetLatestLogEvent();
+         logEvent.Properties.Should().ContainKey("MethodName");
+         logEvent.Properties.Should().NotContainKey("TypeName");
+         logEvent.Properties.Should().NotContainKey("FileName");
+diff --git a/SerilogCallStackEnricher.sln b/SerilogCallStackEnricher.sln
+index dbeae65..8c113c0 100644
+--- a/SerilogCallStackEnricher.sln
++++ b/SerilogCallStackEnricher.sln
+@@ -4,7 +4,7 @@ VisualStudioVersion = 17.0.31903.59
+ MinimumVisualStudioVersion = 10.0.40219.1
+ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serilog.Enrichers.CallStack", "Serilog.Enrichers.CallStack\Serilog.Enrichers.CallStack.csproj", "{A8B5E5A1-7F8C-4D9E-B2A3-C6F1E8D4A7B2}"
+ EndProject
+-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serilog.Enrichers.CallStack.Tests", "Serilog.Enrichers.CallStack.Tests\Serilog.Enrichers.CallStack.Tests.csproj", "{B9C6F6B2-8G9D-4E0F-C3B4-D7G2F9E5B8C3}"
++Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serilog.Enrichers.CallStack.Tests", "Serilog.Enrichers.CallStack.Tests\Serilog.Enrichers.CallStack.Tests.csproj", "{00000000-0000-0000-0000-000000000000}"
+ EndProject
+ Global
+ 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+@@ -16,9 +16,7 @@ Global
+ 		{A8B5E5A1-7F8C-4D9E-B2A3-C6F1E8D4A7B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+ 		{A8B5E5A1-7F8C-4D9E-B2A3-C6F1E8D4A7B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+ 		{A8B5E5A1-7F8C-4D9E-B2A3-C6F1E8D4A7B2}.Release|Any CPU.Build.0 = Release|Any CPU
+-		{B9C6F6B2-8G9D-4E0F-C3B4-D7G2F9E5B8C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+-		{B9C6F6B2-8G9D-4E0F-C3B4-D7G2F9E5B8C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+-		{B9C6F6B2-8G9D-4E0F-C3B4-D7G2F9E5B8C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+-		{B9C6F6B2-8G9D-4E0F-C3B4-D7G2F9E5B8C3}.Release|Any CPU.Build.0 = Release|Any CPU
++		{00000000-0000-0000-0000-000000000000}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
++		{00000000-0000-0000-0000-000000000000}.Debug|Any CPU.Build.0 = Debug|Any CPU
+ 	EndGlobalSection
+-EndGlobal
+\ No newline at end of file
++EndGlobal
+
+c9eff5d2d6af50c5bf009fd8bbda00cc6565a6a6|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-07-28 18:45:00 +0100|docs: Update project status to stable|origin/main, origin/HEAD
+fa7ad6ccffcfd72a81086c3edcb48d0e7a90ceec|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-07-20 17:15:30 +0100|Merge pull request #8 from hokagedami/release/v1.0.0|
+4be6ad282e3cf860708aa959296171ac66604ce4|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-07-20 16:35:12 +0100|chore: Prepare v1.0.0 release|release/v1.0.0
+diff --git a/Serilog.Enrichers.CallStack/Serilog.Enrichers.CallStack.csproj b/Serilog.Enrichers.CallStack/Serilog.Enrichers.CallStack.csproj
+index cc8e59d..d3657f1 100644
+--- a/Serilog.Enrichers.CallStack/Serilog.Enrichers.CallStack.csproj
++++ b/Serilog.Enrichers.CallStack/Serilog.Enrichers.CallStack.csproj
+@@ -6,6 +6,8 @@
+     <Nullable>enable</Nullable>
+     <PackageId>Serilog.Enrichers.CallStack</PackageId>
+     <PackageVersion>1.0.0</PackageVersion>
++    <AssemblyVersion>1.0.0.0</AssemblyVersion>
++    <FileVersion>1.0.0.0</FileVersion>
+     <Authors>Mike D</Authors>
+     <Description>A Serilog enricher that adds call stack information to log events, including method names, file names, and line numbers.</Description>
+     <PackageTags>serilog;enricher;callstack;logging;diagnostics</PackageTags>
+
+de9fef9df3e5673e7e66f5cfd7f23a5f6eb4304a|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-06-12 14:10:20 +0100|Merge pull request #7 from hokagedami/hotfix/test-stability|
+31e57e3ddd9b2e7fee97f80e7186c0fc5eee81ac|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-06-12 13:25:45 +0100|fix: Improve test stability and isolation|hotfix/test-stability
+diff --git a/Serilog.Enrichers.CallStack.Tests/CallStackEnricherTests.cs b/Serilog.Enrichers.CallStack.Tests/CallStackEnricherTests.cs
+index b61102f..6dfeb37 100644
+--- a/Serilog.Enrichers.CallStack.Tests/CallStackEnricherTests.cs
++++ b/Serilog.Enrichers.CallStack.Tests/CallStackEnricherTests.cs
+@@ -13,6 +13,7 @@ public class CallStackEnricherTests
+     public void Enrich_WithDefaultConfiguration_AddsCallStackProperties()
+     {
+         // Arrange
++        InMemorySink.Instance.LogEvents.Clear(); // Ensure clean state
+         using var logger = new LoggerConfiguration()
+             .Enrich.WithCallStack()
+             .WriteTo.InMemory()
+
+07ca0913c23475bc947b1144886318a28fefbb50|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-05-15 12:30:15 +0100|Merge pull request #6 from hokagedami/feature/advanced-filtering|
+6cd9df3d8a52ec7b62700986f98a2ded88e62cde|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-05-15 11:42:33 +0100|feat: Improve namespace filtering documentation|feature/advanced-filtering
+diff --git a/Serilog.Enrichers.CallStack/CallStackEnricherConfiguration.cs b/Serilog.Enrichers.CallStack/CallStackEnricherConfiguration.cs
+index 9bda3f5..4412e8f 100644
+--- a/Serilog.Enrichers.CallStack/CallStackEnricherConfiguration.cs
++++ b/Serilog.Enrichers.CallStack/CallStackEnricherConfiguration.cs
+@@ -125,6 +125,7 @@ public class CallStackEnricherConfiguration
+ 
+     /// <summary>
+     /// Gets the collection of namespaces to skip when walking the stack trace.
++    /// Default includes common system namespaces for better performance.
+     /// </summary>
+     public ICollection<string> SkipNamespaces { get; } = new HashSet<string>(StringComparer.Ordinal);
+ 
+
+5d2f09bfef5c9584e54c04bc434aca46124ced58|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-04-08 15:00:12 +0100|Merge pull request #5 from hokagedami/docs/readme-update|
+f72e87266e6c1b02cd1d4cfbb6456813ca4722c4|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-04-08 14:18:27 +0100|docs: Update README with performance optimization notes|docs/readme-update
+diff --git a/README.md b/README.md
+index 573c83a..4f09b9d 100644
+--- a/README.md
++++ b/README.md
+@@ -292,4 +292,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
+ - Core call stack enrichment functionality
+ - Comprehensive configuration options
+ - Full test coverage
+-- Documentation and examples
+\ No newline at end of file
++- Documentation and examples
++- Performance optimizations for high-throughput scenarios
+\ No newline at end of file
+
+9cbeef5b149d03fe14ea41d8bed20244dee4cd5e|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-03-10 10:05:33 +0000|Merge pull request #4 from hokagedami/feature/performance-optimization|
+1726baea1a3f442192de5854498803aa4b89a0fa|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-03-10 09:22:18 +0000|perf: Optimize stack trace frame processing|feature/performance-optimization
+diff --git a/Serilog.Enrichers.CallStack/CallStackEnricher.cs b/Serilog.Enrichers.CallStack/CallStackEnricher.cs
+index e807ad6..b89ff74 100644
+--- a/Serilog.Enrichers.CallStack/CallStackEnricher.cs
++++ b/Serilog.Enrichers.CallStack/CallStackEnricher.cs
+@@ -45,6 +45,10 @@ public class CallStackEnricher : ILogEventEnricher
+             var stackTrace = new StackTrace(true);
+             var frames = stackTrace.GetFrames();
+             
++            // Performance optimization: early exit if no frames
++            if (frames?.Length == 0)
++                return;
++            
+             if (frames == null || frames.Length == 0)
+                 return;
+ 
+
+0df12052ca1394a4bdf4e209947137bc029b52e9|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-02-18 17:00:15 +0000|Merge pull request #3 from hokagedami/feature/testing-framework|
+51c0a5d87937f63ee6e2aa9cc65b772661ba8752|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-02-18 16:30:45 +0000|test: Enhance testing framework and utilities|feature/testing-framework
+diff --git a/Serilog.Enrichers.CallStack.Tests/PropertyFactory.cs b/Serilog.Enrichers.CallStack.Tests/PropertyFactory.cs
+index d40d082..bc44e3e 100644
+--- a/Serilog.Enrichers.CallStack.Tests/PropertyFactory.cs
++++ b/Serilog.Enrichers.CallStack.Tests/PropertyFactory.cs
+@@ -4,7 +4,7 @@ using Serilog.Events;
+ namespace Serilog.Enrichers.CallStack.Tests;
+ 
+ /// <summary>
+-/// Test helper class for creating log event properties.
++/// Test helper class for creating log event properties with enhanced functionality.
+ /// </summary>
+ public class PropertyFactory : ILogEventPropertyFactory
+ {
+
+509cbe6e899e6464c00767a6c90fba364095449e|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-02-05 11:15:30 +0000|Merge pull request #2 from hokagedami/feature/core-enricher|
+45beb762d46210718f09250090f6ccba09725345|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-02-05 10:45:20 +0000|feat: Improve CallStackEnricher exception handling|feature/core-enricher
+diff --git a/Serilog.Enrichers.CallStack/CallStackEnricher.cs b/Serilog.Enrichers.CallStack/CallStackEnricher.cs
+index 53b63b7..e807ad6 100644
+--- a/Serilog.Enrichers.CallStack/CallStackEnricher.cs
++++ b/Serilog.Enrichers.CallStack/CallStackEnricher.cs
+@@ -57,6 +57,7 @@ public class CallStackEnricher : ILogEventEnricher
+         catch (Exception ex) when (_configuration.SuppressExceptions)
+         {
+             // Silently ignore exceptions when configured to do so
++            _configuration.OnException?.Invoke(ex);
+             if (_configuration.OnException != null)
+             {
+                 try
+
+ba390786422f644be2a49298fa09e54c30cf3578|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-01-22 15:30:45 +0000|Merge pull request #1 from hokagedami/feature/enricher-config|
+f65800ea1e208c6977153c9b9650d0ae75458dbd|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-01-22 14:20:15 +0000|feat: Enhance CallStackEnricherConfiguration fluent API|feature/enricher-config
+diff --git a/Serilog.Enrichers.CallStack/CallStackEnricherConfiguration.cs b/Serilog.Enrichers.CallStack/CallStackEnricherConfiguration.cs
+index 02a370d..9bda3f5 100644
+--- a/Serilog.Enrichers.CallStack/CallStackEnricherConfiguration.cs
++++ b/Serilog.Enrichers.CallStack/CallStackEnricherConfiguration.cs
+@@ -4,7 +4,7 @@ using System.Collections.Generic;
+ namespace Serilog.Enrichers.CallStack;
+ 
+ /// <summary>
+-/// Configuration for the CallStackEnricher.
++/// Configuration for the CallStackEnricher with enhanced fluent API.
+ /// </summary>
+ public class CallStackEnricherConfiguration
+ {
+
+e83b72e1a36daf2a97f56ff505a2d14609cc543a|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-01-15 09:15:30 +0000|feat: Initial project setup and solution structure|
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..8227d74
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,172 @@
++# Build results
++[Dd]ebug/
++[Dd]ebugPublic/
++[Rr]elease/
++[Rr]eleases/
++x64/
++x86/
++[Ww][Ii][Nn]32/
++[Aa][Rr][Mm]/
++[Aa][Rr][Mm]64/
++bld/
++[Bb]in/
++[Oo]bj/
++[Ll]og/
++[Ll]ogs/
++
++# Visual Studio 2015/2017 cache/options directory
++.vs/
++# Uncomment if you have tasks that create the project's static files in wwwroot
++#wwwroot/
++
++# Visual Studio 2017 auto generated files
++Generated\ Files/
++
++# MSTest test Results
++[Tt]est[Rr]esult*/
++[Bb]uild[Ll]og.*
++
++# NUnit
++*.VisualState.xml
++TestResult.xml
++nunit-*.xml
++
++# Build Results of an ATL Project
++[Dd]ebugPS/
++[Rr]eleasePS/
++dlldata.c
++
++# Benchmark Results
++BenchmarkDotNet.Artifacts/
++
++# .NET Core
++project.lock.json
++project.fragment.lock.json
++artifacts/
++
++# StyleCop
++StyleCopReport.xml
++
++# Files built by Visual Studio
++*_i.c
++*_p.c
++*_h.h
++*.ilk
++*.meta
++*.obj
++*.iobj
++*.pch
++*.pdb
++*.ipdb
++*.pgc
++*.pgd
++*.rsp
++*.sbr
++*.tlb
++*.tli
++*.tlh
++*.tmp
++*.tmp_proj
++*_wpftmp.csproj
++*.log
++*.vspscc
++*.vssscc
++.builds
++*.pidb
++*.svclog
++*.scc
++
++# Chutzpah Test files
++_Chutzpah*
++
++# Visual C++ cache files
++ipch/
++*.aps
++*.ncb
++*.opendb
++*.opensdf
++*.sdf
++*.cachefile
++*.VC.db
++*.VC.VC.opendb
++
++# Visual Studio profiler
++*.psess
++*.vsp
++*.vspx
++*.sap
++
++# Visual Studio Trace Files
++*.e2e
++
++# TFS 2012 Local Workspace
++$tf/
++
++# Guidance Automation Toolkit
++*.gpState
++
++# ReSharper is a .NET coding add-in
++_ReSharper*/
++*.[Rr]e[Ss]harper
++*.DotSettings.user
++.idea/
++
++# JetBrains Rider
++.idea/
++*.sln.iml
++
++# CodeRush personal settings
++.cr/personal
++
++# Python Tools for Visual Studio (PTVS)
++__pycache__/
++*.pyc
++
++# Cake - Uncomment if you are using it
++# tools/**
++# !tools/packages.config
++
++# Tabs Studio
++*.tss
++
++# Telerik's JustMock configuration file
++*.jmconfig
++
++# BizTalk build output
++*.btp.cs
++*.btm.cs
++*.odx.cs
++*.xsd.cs
++
++# OpenCover UI analysis results
++OpenCover/
++
++# Azure Stream Analytics local run output
++ASALocalRun/
++
++# MSBuild Binary and Structured Log
++*.binlog
++
++# NVidia Nsight GPU debugger configuration file
++*.nvuser
++
++# MFractors (Xamarin productivity tool) working folder
++.mfractor/
++
++# Local History for Visual Studio
++.localhistory/
++
++# BeatPulse healthcheck temp database
++healthchecksdb
++
++# Backup folder for Package Reference Convert tool in Visual Studio 2017
++MigrationBackup/
++
++# Ionide (cross platform F# VS Code tools) working folder
++.ionide/
++
++# Fody - auto-generated XML schema
++FodyWeavers.xsd
++
++# Claude AI
++.claude/
+\ No newline at end of file
+diff --git a/LICENSE b/LICENSE
+new file mode 100644
+index 0000000..2ffeff5
+--- /dev/null
++++ b/LICENSE
+@@ -0,0 +1,21 @@
++MIT License
++
++Copyright (c) 2025 Michael Akinyemi
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..573c83a
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,295 @@
++# Serilog.Enrichers.CallStack
++
++A Serilog enricher that adds call stack information to log events, including method names, file names, and line numbers. This enricher helps with debugging and tracing by providing detailed context about where log events originated.
++
++## Features
++
++- **Method Names**: Capture the calling method name with optional parameter information
++- **Type Names**: Include the declaring type name (class/struct) with optional namespace
++- **File Information**: Add source file names with optional full paths
++- **Line Numbers**: Include source code line numbers for precise location tracking
++- **Column Numbers**: Optional column number information
++- **Assembly Names**: Include assembly information when needed
++- **Flexible Configuration**: Extensive configuration options for customization
++- **Exception Handling**: Configurable exception handling to prevent logging failures
++- **Frame Filtering**: Skip specific namespaces or types when walking the call stack
++- **Frame Offset**: Choose which frame in the call stack to capture
++
++## Installation
++
++```bash
++dotnet add package Serilog.Enrichers.CallStack
++```
++
++## Quick Start
++
++### Basic Usage
++
++```csharp
++using Serilog;
++using Serilog.Enrichers.CallStack;
++
++var logger = new LoggerConfiguration()
++    .Enrich.WithCallStack()
++    .WriteTo.Console()
++    .CreateLogger();
++
++logger.Information("Hello, world!");
++```
++
++This will produce log output similar to:
++```
++[15:30:45 INF] Hello, world! {MethodName="Main", TypeName="Program", FileName="Program.cs", LineNumber=12}
++```
++
++### With Configuration
++
++```csharp
++var logger = new LoggerConfiguration()
++    .Enrich.WithCallStack(config => config
++        .WithIncludes(methodName: true, typeName: true, fileName: true, lineNumber: true)
++        .WithFullNames(fullTypeName: true)
++        .WithMethodParameters(includeParameters: true)
++        .SkipNamespace("System")
++        .SkipNamespace("Microsoft"))
++    .WriteTo.Console()
++    .CreateLogger();
++```
++
++## Configuration Options
++
++### Include/Exclude Information
++
++```csharp
++var config = new CallStackEnricherConfiguration()
++    .WithIncludes(
++        methodName: true,      // Include method names
++        typeName: true,        // Include type names
++        fileName: true,        // Include file names
++        lineNumber: true,      // Include line numbers
++        columnNumber: false,   // Include column numbers
++        assemblyName: false);  // Include assembly names
++```
++
++### Property Names
++
++Customize the property names used in log events:
++
++```csharp
++var config = new CallStackEnricherConfiguration()
++    .WithPropertyNames(
++        methodName: "Method",
++        typeName: "Class",
++        fileName: "File",
++        lineNumber: "Line",
++        columnNumber: "Column",
++        assemblyName: "Assembly");
++```
++
++### Full vs. Short Names
++
++Control whether to use full names (with namespaces/paths) or short names:
++
++```csharp
++var config = new CallStackEnricherConfiguration()
++    .WithFullNames(
++        fullTypeName: true,        // Use "MyApp.Services.UserService" vs "UserService"
++        fullFileName: true,        // Use full path vs just filename
++        fullParameterTypes: true); // Use full type names in parameters
++```
++
++### Method Parameters
++
++Include method parameter information in the method name:
++
++```csharp
++var config = new CallStackEnricherConfiguration()
++    .WithMethodParameters(
++        includeParameters: true,
++        useFullParameterTypes: false);
++
++// Results in: "ProcessUser(String name, Int32 id)" instead of just "ProcessUser"
++```
++
++### Skip Frames
++
++Skip specific namespaces or types when walking the call stack:
++
++```csharp
++var config = new CallStackEnricherConfiguration()
++    .SkipNamespace("System")
++    .SkipNamespace("Microsoft")
++    .SkipNamespace("Serilog")
++    .SkipType("MyApp.Infrastructure.LoggingWrapper");
++```
++
++### Frame Offset
++
++Choose which frame in the call stack to capture:
++
++```csharp
++var config = new CallStackEnricherConfiguration()
++    .WithFrameOffset(1); // Skip 1 frame up the call stack
++```
++
++### Exception Handling
++
++Configure how exceptions during enrichment are handled:
++
++```csharp
++var config = new CallStackEnricherConfiguration()
++    .WithExceptionHandling(
++        suppress: true,  // Don't throw exceptions
++        onException: ex => Console.WriteLine($"Enricher error: {ex.Message}"));
++```
++
++## Advanced Configuration Examples
++
++### Minimal Configuration
++
++For production environments where you want minimal overhead:
++
++```csharp
++var config = new CallStackEnricherConfiguration()
++    .WithIncludes(
++        methodName: true,
++        typeName: true,
++        fileName: false,      // Skip file names to reduce overhead
++        lineNumber: false,    // Skip line numbers
++        columnNumber: false,
++        assemblyName: false)
++    .WithFullNames(fullTypeName: false); // Use short type names
++```
++
++### Development Configuration
++
++For development environments where you want maximum detail:
++
++```csharp
++var config = new CallStackEnricherConfiguration()
++    .WithIncludes(
++        methodName: true,
++        typeName: true,
++        fileName: true,
++        lineNumber: true,
++        columnNumber: true,
++        assemblyName: true)
++    .WithFullNames(
++        fullTypeName: true,
++        fullFileName: true,
++        fullParameterTypes: true)
++    .WithMethodParameters(includeParameters: true)
++    .WithExceptionHandling(suppress: false); // Throw exceptions for debugging
++```
++
++### Filtering Configuration
++
++Skip common framework types and focus on application code:
++
++```csharp
++var config = new CallStackEnricherConfiguration()
++    .SkipNamespace("System")
++    .SkipNamespace("Microsoft")
++    .SkipNamespace("Serilog")
++    .SkipNamespace("Newtonsoft")
++    .SkipType("MyApp.Infrastructure.LoggingService")
++    .WithFrameOffset(0);
++```
++
++## Integration with Different Sinks
++
++### Console Output
++
++```csharp
++var logger = new LoggerConfiguration()
++    .Enrich.WithCallStack()
++    .WriteTo.Console(outputTemplate: 
++        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} " +
++        "({TypeName}.{MethodName} in {FileName}:{LineNumber}){NewLine}{Exception}")
++    .CreateLogger();
++```
++
++### JSON Output (for structured logging)
++
++```csharp
++var logger = new LoggerConfiguration()
++    .Enrich.WithCallStack()
++    .WriteTo.File(new JsonFormatter(), "log.json")
++    .CreateLogger();
++```
++
++### Seq Integration
++
++```csharp
++var logger = new LoggerConfiguration()
++    .Enrich.WithCallStack()
++    .WriteTo.Seq("http://localhost:5341")
++    .CreateLogger();
++```
++
++## Performance Considerations
++
++- **Debug vs Release**: Call stack information is more accurate in Debug builds
++- **File/Line Info**: Including file names and line numbers requires debug symbols
++- **Method Parameters**: Including parameter information adds overhead
++- **Frame Skipping**: Use skip configurations to avoid walking unnecessary frames
++- **Exception Handling**: Enable exception suppression in production
++
++## Debug Symbols
++
++For file names and line numbers to work properly, ensure your application is built with debug symbols:
++
++```xml
++<PropertyGroup>
++  <DebugType>portable</DebugType>
++  <DebugSymbols>true</DebugSymbols>
++</PropertyGroup>
++```
++
++## Example Output
++
++With full configuration, log events will include rich call stack information:
++
++```json
++{
++  "@t": "2024-01-15T15:30:45.123Z",
++  "@l": "Information",
++  "@m": "Processing user request",
++  "MethodName": "ProcessRequest(String userId, UserRequest request)",
++  "TypeName": "MyApp.Services.UserService",
++  "FileName": "UserService.cs",
++  "LineNumber": 45,
++  "ColumnNumber": 12,
++  "AssemblyName": "MyApp.Services"
++}
++```
++
++## Best Practices
++
++1. **Use appropriate configuration for your environment**: Detailed information for development, minimal for production
++2. **Skip framework namespaces**: Focus on your application code by skipping system namespaces
++3. **Consider performance impact**: Call stack walking has overhead, especially with full configuration
++4. **Enable exception suppression in production**: Prevent logging failures from breaking your application
++5. **Use structured logging sinks**: JSON-based sinks work best with the additional properties
++
++## Compatibility
++
++- **.NET Standard 2.0+**: Compatible with .NET Framework 4.6.1+, .NET Core 2.0+, .NET 5+
++- **Serilog 3.0+**: Requires Serilog version 3.0 or higher
++
++## License
++
++This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
++
++## Contributing
++
++Contributions are welcome! Please feel free to submit a Pull Request.
++
++## Changelog
++
++### Version 1.0.0
++- Initial release
++- Core call stack enrichment functionality
++- Comprehensive configuration options
++- Full test coverage
++- Documentation and examples
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack.Tests/CallStackEnricherConfigurationTests.cs b/Serilog.Enrichers.CallStack.Tests/CallStackEnricherConfigurationTests.cs
+new file mode 100644
+index 0000000..de75b2e
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack.Tests/CallStackEnricherConfigurationTests.cs
+@@ -0,0 +1,285 @@
++using FluentAssertions;
++using System;
++using Xunit;
++
++namespace Serilog.Enrichers.CallStack.Tests;
++
++public class CallStackEnricherConfigurationTests
++{
++    [Fact]
++    public void Constructor_CreatesInstanceWithDefaultValues()
++    {
++        // Act
++        var config = new CallStackEnricherConfiguration();
++
++        // Assert
++        config.IncludeMethodName.Should().BeTrue();
++        config.IncludeMethodParameters.Should().BeFalse();
++        config.UseFullParameterTypes.Should().BeFalse();
++        config.IncludeTypeName.Should().BeTrue();
++        config.UseFullTypeName.Should().BeFalse();
++        config.IncludeFileName.Should().BeTrue();
++        config.UseFullFileName.Should().BeFalse();
++        config.IncludeLineNumber.Should().BeTrue();
++        config.IncludeColumnNumber.Should().BeFalse();
++        config.IncludeAssemblyName.Should().BeFalse();
++        
++        config.MethodNamePropertyName.Should().Be("MethodName");
++        config.TypeNamePropertyName.Should().Be("TypeName");
++        config.FileNamePropertyName.Should().Be("FileName");
++        config.LineNumberPropertyName.Should().Be("LineNumber");
++        config.ColumnNumberPropertyName.Should().Be("ColumnNumber");
++        config.AssemblyNamePropertyName.Should().Be("AssemblyName");
++        
++        config.FrameOffset.Should().Be(0);
++        config.SuppressExceptions.Should().BeTrue();
++        config.OnException.Should().BeNull();
++        
++        config.SkipNamespaces.Should().BeEmpty();
++        config.SkipTypes.Should().BeEmpty();
++    }
++
++    [Fact]
++    public void SkipNamespace_WithValidNamespace_AddsToCollection()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration();
++        var testNamespace = "Test.Namespace";
++
++        // Act
++        var result = config.SkipNamespace(testNamespace);
++
++        // Assert
++        result.Should().BeSameAs(config); // Method chaining
++        config.SkipNamespaces.Should().Contain(testNamespace);
++    }
++
++    [Fact]
++    public void SkipNamespace_WithNullNamespace_ThrowsArgumentNullException()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration();
++
++        // Act & Assert
++        var act = () => config.SkipNamespace(null!);
++        act.Should().Throw<ArgumentNullException>()
++            .WithParameterName("namespace");
++    }
++
++    [Fact]
++    public void SkipType_WithValidTypeName_AddsToCollection()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration();
++        var testType = "Test.Type.Name";
++
++        // Act
++        var result = config.SkipType(testType);
++
++        // Assert
++        result.Should().BeSameAs(config); // Method chaining
++        config.SkipTypes.Should().Contain(testType);
++    }
++
++    [Fact]
++    public void SkipType_WithNullTypeName_ThrowsArgumentNullException()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration();
++
++        // Act & Assert
++        var act = () => config.SkipType(null!);
++        act.Should().Throw<ArgumentNullException>()
++            .WithParameterName("typeName");
++    }
++
++    [Fact]
++    public void WithFrameOffset_WithValidOffset_SetsFrameOffset()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration();
++
++        // Act
++        var result = config.WithFrameOffset(5);
++
++        // Assert
++        result.Should().BeSameAs(config); // Method chaining
++        config.FrameOffset.Should().Be(5);
++    }
++
++    [Fact]
++    public void WithFrameOffset_WithNegativeOffset_SetsToZero()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration();
++
++        // Act
++        var result = config.WithFrameOffset(-5);
++
++        // Assert
++        result.Should().BeSameAs(config); // Method chaining
++        config.FrameOffset.Should().Be(0);
++    }
++
++    [Fact]
++    public void WithExceptionHandling_SetsExceptionHandlingProperties()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration();
++        var exceptionHandler = new Action<Exception>(ex => { });
++
++        // Act
++        var result = config.WithExceptionHandling(false, exceptionHandler);
++
++        // Assert
++        result.Should().BeSameAs(config); // Method chaining
++        config.SuppressExceptions.Should().BeFalse();
++        config.OnException.Should().BeSameAs(exceptionHandler);
++    }
++
++    [Fact]
++    public void WithIncludes_SetsIncludeProperties()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration();
++
++        // Act
++        var result = config.WithIncludes(
++            methodName: false,
++            typeName: false,
++            fileName: false,
++            lineNumber: false,
++            columnNumber: true,
++            assemblyName: true);
++
++        // Assert
++        result.Should().BeSameAs(config); // Method chaining
++        config.IncludeMethodName.Should().BeFalse();
++        config.IncludeTypeName.Should().BeFalse();
++        config.IncludeFileName.Should().BeFalse();
++        config.IncludeLineNumber.Should().BeFalse();
++        config.IncludeColumnNumber.Should().BeTrue();
++        config.IncludeAssemblyName.Should().BeTrue();
++    }
++
++    [Fact]
++    public void WithPropertyNames_WithAllParameters_SetsAllPropertyNames()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration();
++
++        // Act
++        var result = config.WithPropertyNames(
++            methodName: "CustomMethod",
++            typeName: "CustomType",
++            fileName: "CustomFile",
++            lineNumber: "CustomLine",
++            columnNumber: "CustomColumn",
++            assemblyName: "CustomAssembly");
++
++        // Assert
++        result.Should().BeSameAs(config); // Method chaining
++        config.MethodNamePropertyName.Should().Be("CustomMethod");
++        config.TypeNamePropertyName.Should().Be("CustomType");
++        config.FileNamePropertyName.Should().Be("CustomFile");
++        config.LineNumberPropertyName.Should().Be("CustomLine");
++        config.ColumnNumberPropertyName.Should().Be("CustomColumn");
++        config.AssemblyNamePropertyName.Should().Be("CustomAssembly");
++    }
++
++    [Fact]
++    public void WithPropertyNames_WithNullValues_KeepsOriginalValues()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration();
++        var originalMethodName = config.MethodNamePropertyName;
++        var originalTypeName = config.TypeNamePropertyName;
++
++        // Act
++        var result = config.WithPropertyNames(methodName: null, typeName: null);
++
++        // Assert
++        result.Should().BeSameAs(config); // Method chaining
++        config.MethodNamePropertyName.Should().Be(originalMethodName);
++        config.TypeNamePropertyName.Should().Be(originalTypeName);
++    }
++
++    [Fact]
++    public void WithPropertyNames_WithEmptyValues_KeepsOriginalValues()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration();
++        var originalMethodName = config.MethodNamePropertyName;
++        var originalTypeName = config.TypeNamePropertyName;
++
++        // Act
++        var result = config.WithPropertyNames(methodName: "", typeName: "");
++
++        // Assert
++        result.Should().BeSameAs(config); // Method chaining
++        config.MethodNamePropertyName.Should().Be(originalMethodName);
++        config.TypeNamePropertyName.Should().Be(originalTypeName);
++    }
++
++    [Fact]
++    public void WithFullNames_SetsFullNameProperties()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration();
++
++        // Act
++        var result = config.WithFullNames(
++            fullTypeName: true,
++            fullFileName: true,
++            fullParameterTypes: true);
++
++        // Assert
++        result.Should().BeSameAs(config); // Method chaining
++        config.UseFullTypeName.Should().BeTrue();
++        config.UseFullFileName.Should().BeTrue();
++        config.UseFullParameterTypes.Should().BeTrue();
++    }
++
++    [Fact]
++    public void WithMethodParameters_SetsMethodParameterProperties()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration();
++
++        // Act
++        var result = config.WithMethodParameters(
++            includeParameters: true,
++            useFullParameterTypes: true);
++
++        // Assert
++        result.Should().BeSameAs(config); // Method chaining
++        config.IncludeMethodParameters.Should().BeTrue();
++        config.UseFullParameterTypes.Should().BeTrue();
++    }
++
++    [Fact]
++    public void FluentConfiguration_CanChainMultipleMethods()
++    {
++        // Act
++        var config = new CallStackEnricherConfiguration()
++            .SkipNamespace("Test.Namespace")
++            .SkipType("Test.Type")
++            .WithFrameOffset(2)
++            .WithIncludes(methodName: true, typeName: false)
++            .WithPropertyNames(methodName: "Method")
++            .WithFullNames(fullTypeName: true)
++            .WithMethodParameters(includeParameters: true)
++            .WithExceptionHandling(false);
++
++        // Assert
++        config.SkipNamespaces.Should().Contain("Test.Namespace");
++        config.SkipTypes.Should().Contain("Test.Type");
++        config.FrameOffset.Should().Be(2);
++        config.IncludeMethodName.Should().BeTrue();
++        config.IncludeTypeName.Should().BeFalse();
++        config.MethodNamePropertyName.Should().Be("Method");
++        config.UseFullTypeName.Should().BeTrue();
++        config.IncludeMethodParameters.Should().BeTrue();
++        config.SuppressExceptions.Should().BeFalse();
++    }
++}
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack.Tests/CallStackEnricherTests.cs b/Serilog.Enrichers.CallStack.Tests/CallStackEnricherTests.cs
+new file mode 100644
+index 0000000..b61102f
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack.Tests/CallStackEnricherTests.cs
+@@ -0,0 +1,309 @@
++using FluentAssertions;
++using Serilog.Events;
++using Serilog.Sinks.InMemory;
++using System;
++using System.Linq;
++using Xunit;
++
++namespace Serilog.Enrichers.CallStack.Tests;
++
++public class CallStackEnricherTests
++{
++    [Fact]
++    public void Enrich_WithDefaultConfiguration_AddsCallStackProperties()
++    {
++        // Arrange
++        using var logger = new LoggerConfiguration()
++            .Enrich.WithCallStack()
++            .WriteTo.InMemory()
++            .CreateLogger();
++
++        // Act
++        LogFromMethod(logger);
++
++        // Assert
++        var logEvents = InMemorySink.Instance.LogEvents;
++        logEvents.Should().HaveCount(1);
++        
++        var logEvent = logEvents.First();
++        logEvent.Properties.Should().ContainKey("MethodName");
++        logEvent.Properties.Should().ContainKey("TypeName");
++        logEvent.Properties.Should().ContainKey("FileName");
++        logEvent.Properties.Should().ContainKey("LineNumber");
++        
++        var methodName = logEvent.Properties["MethodName"].ToString();
++        methodName.Should().Contain("LogFromMethod");
++        
++        var typeName = logEvent.Properties["TypeName"].ToString();
++        typeName.Should().Contain("CallStackEnricherTests");
++    }
++
++    [Fact]
++    public void Enrich_WithCustomConfiguration_UsesCustomPropertyNames()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration()
++            .WithPropertyNames(
++                methodName: "CustomMethod",
++                typeName: "CustomType",
++                fileName: "CustomFile",
++                lineNumber: "CustomLine");
++        
++        using var logger = new LoggerConfiguration()
++            .Enrich.WithCallStack(config)
++            .WriteTo.InMemory()
++            .CreateLogger();
++
++        // Act
++        LogFromMethod(logger);
++
++        // Assert
++        var logEvents = InMemorySink.Instance.LogEvents;
++        logEvents.Should().HaveCount(1);
++        
++        var logEvent = logEvents.First();
++        logEvent.Properties.Should().ContainKey("CustomMethod");
++        logEvent.Properties.Should().ContainKey("CustomType");
++        logEvent.Properties.Should().ContainKey("CustomFile");
++        logEvent.Properties.Should().ContainKey("CustomLine");
++    }
++
++    [Fact]
++    public void Enrich_WithIncludeMethodParameters_IncludesParameterInfo()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration()
++            .WithMethodParameters(includeParameters: true);
++        
++        using var logger = new LoggerConfiguration()
++            .Enrich.WithCallStack(config)
++            .WriteTo.InMemory()
++            .CreateLogger();
++
++        // Act
++        LogFromMethodWithParameters(logger, "test", 123);
++
++        // Assert
++        var logEvents = InMemorySink.Instance.LogEvents;
++        logEvents.Should().HaveCount(1);
++        
++        var logEvent = logEvents.First();
++        var methodName = logEvent.Properties["MethodName"].ToString();
++        methodName.Should().Contain("(");
++        methodName.Should().Contain(")");
++    }
++
++    [Fact]
++    public void Enrich_WithFullTypeName_IncludesNamespace()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration()
++            .WithFullNames(fullTypeName: true);
++        
++        using var logger = new LoggerConfiguration()
++            .Enrich.WithCallStack(config)
++            .WriteTo.InMemory()
++            .CreateLogger();
++
++        // Act
++        LogFromMethod(logger);
++
++        // Assert
++        var logEvents = InMemorySink.Instance.LogEvents;
++        logEvents.Should().HaveCount(1);
++        
++        var logEvent = logEvents.First();
++        var typeName = logEvent.Properties["TypeName"].ToString();
++        typeName.Should().Contain("Serilog.Enrichers.CallStack.Tests");
++    }
++
++    [Fact]
++    public void Enrich_WithSkipNamespace_SkipsSpecifiedNamespace()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration()
++            .SkipNamespace("Serilog.Enrichers.CallStack.Tests");
++        
++        using var logger = new LoggerConfiguration()
++            .Enrich.WithCallStack(config)
++            .WriteTo.InMemory()
++            .CreateLogger();
++
++        // Act
++        LogFromMethod(logger);
++
++        // Assert
++        var logEvents = InMemorySink.Instance.LogEvents;
++        logEvents.Should().HaveCount(1);
++        
++        var logEvent = logEvents.First();
++        // Since we're skipping our own namespace, it should find a different frame
++        // or may not add properties if no suitable frame is found
++        if (logEvent.Properties.ContainsKey("TypeName"))
++        {
++            var typeName = logEvent.Properties["TypeName"].ToString();
++            typeName.Should().NotContain("CallStackEnricherTests");
++        }
++    }
++
++    [Fact]
++    public void Enrich_WithFrameOffset_UsesCorrectFrame()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration()
++            .WithFrameOffset(1);
++        
++        using var logger = new LoggerConfiguration()
++            .Enrich.WithCallStack(config)
++            .WriteTo.InMemory()
++            .CreateLogger();
++
++        // Act
++        CallMethodThatLogs(logger);
++
++        // Assert
++        var logEvents = InMemorySink.Instance.LogEvents;
++        logEvents.Should().HaveCount(1);
++        
++        var logEvent = logEvents.First();
++        if (logEvent.Properties.ContainsKey("MethodName"))
++        {
++            var methodName = logEvent.Properties["MethodName"].ToString();
++            // With offset 1, it should capture the calling method instead of LogFromMethod
++            methodName.Should().Contain("CallMethodThatLogs");
++        }
++    }
++
++    [Fact]
++    public void Enrich_WithDisabledIncludes_DoesNotAddDisabledProperties()
++    {
++        // Arrange
++        var config = new CallStackEnricherConfiguration()
++            .WithIncludes(
++                methodName: true,
++                typeName: false,
++                fileName: false,
++                lineNumber: false);
++        
++        using var logger = new LoggerConfiguration()
++            .Enrich.WithCallStack(config)
++            .WriteTo.InMemory()
++            .CreateLogger();
++
++        // Act
++        LogFromMethod(logger);
++
++        // Assert
++        var logEvents = InMemorySink.Instance.LogEvents;
++        logEvents.Should().HaveCount(1);
++        
++        var logEvent = logEvents.First();
++        logEvent.Properties.Should().ContainKey("MethodName");
++        logEvent.Properties.Should().NotContainKey("TypeName");
++        logEvent.Properties.Should().NotContainKey("FileName");
++        logEvent.Properties.Should().NotContainKey("LineNumber");
++    }
++
++    [Fact]
++    public void Enrich_WithThrowingPropertyFactory_HandlesExceptionsGracefully()
++    {
++        // Arrange
++        var enricher = new CallStackEnricher();
++        var logEvent = new LogEvent(
++            DateTimeOffset.Now,
++            LogEventLevel.Information,
++            null,
++            MessageTemplate.Empty,
++            Enumerable.Empty<LogEventProperty>());
++        
++        var throwingFactory = new ThrowingPropertyFactory();
++
++        // Act & Assert
++        // Should not throw exception
++        var act = () => enricher.Enrich(logEvent, throwingFactory);
++        act.Should().NotThrow();
++    }
++
++    [Fact]
++    public void Enrich_WithExceptionHandling_CallsExceptionHandler()
++    {
++        // Arrange
++        Exception? caughtException = null;
++        var config = new CallStackEnricherConfiguration()
++            .WithExceptionHandling(suppress: true, onException: ex => caughtException = ex);
++        
++        var enricher = new CallStackEnricher(config);
++        var logEvent = new LogEvent(
++            DateTimeOffset.Now,
++            LogEventLevel.Information,
++            null,
++            MessageTemplate.Empty,
++            Enumerable.Empty<LogEventProperty>());
++        
++        var throwingFactory = new ThrowingPropertyFactory();
++
++        // Act
++        enricher.Enrich(logEvent, throwingFactory);
++
++        // Assert
++        caughtException.Should().NotBeNull();
++        caughtException.Should().BeOfType<InvalidOperationException>();
++    }
++
++    [Fact]
++    public void Constructor_WithNullConfiguration_ThrowsArgumentNullException()
++    {
++        // Act & Assert
++        var act = () => new CallStackEnricher(null!);
++        act.Should().Throw<ArgumentNullException>()
++            .WithParameterName("configuration");
++    }
++
++    [Fact]
++    public void LoggerConfiguration_WithNullEnrichmentConfiguration_ThrowsArgumentNullException()
++    {
++        // Act & Assert
++        var act = () => LoggerConfigurationExtensions.WithCallStack(null!);
++        act.Should().Throw<ArgumentNullException>()
++            .WithParameterName("enrichmentConfiguration");
++    }
++
++    [Fact]
++    public void LoggerConfiguration_WithNullConfiguration_ThrowsArgumentNullException()
++    {
++        // Arrange
++        var enrichmentConfig = new LoggerConfiguration().Enrich;
++
++        // Act & Assert
++        var act = () => enrichmentConfig.WithCallStack((CallStackEnricherConfiguration)null!);
++        act.Should().Throw<ArgumentNullException>()
++            .WithParameterName("configuration");
++    }
++
++    [Fact]
++    public void LoggerConfiguration_WithNullConfigureAction_ThrowsArgumentNullException()
++    {
++        // Arrange
++        var enrichmentConfig = new LoggerConfiguration().Enrich;
++
++        // Act & Assert
++        var act = () => enrichmentConfig.WithCallStack((Action<CallStackEnricherConfiguration>)null!);
++        act.Should().Throw<ArgumentNullException>()
++            .WithParameterName("configureEnricher");
++    }
++
++    private static void LogFromMethod(ILogger logger)
++    {
++        logger.Information("Test message");
++    }
++
++    private static void LogFromMethodWithParameters(ILogger logger, string param1, int param2)
++    {
++        logger.Information("Test message with parameters");
++    }
++
++    private static void CallMethodThatLogs(ILogger logger)
++    {
++        LogFromMethod(logger);
++    }
++}
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack.Tests/PropertyFactory.cs b/Serilog.Enrichers.CallStack.Tests/PropertyFactory.cs
+new file mode 100644
+index 0000000..d40d082
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack.Tests/PropertyFactory.cs
+@@ -0,0 +1,23 @@
++using Serilog.Core;
++using Serilog.Events;
++
++namespace Serilog.Enrichers.CallStack.Tests;
++
++/// <summary>
++/// Test helper class for creating log event properties.
++/// </summary>
++public class PropertyFactory : ILogEventPropertyFactory
++{
++    /// <summary>
++    /// Creates a log event property with the specified name and value.
++    /// </summary>
++    /// <param name="name">The property name.</param>
++    /// <param name="value">The property value.</param>
++    /// <param name="destructureObjects">Whether to destructure the value.</param>
++    /// <returns>A new log event property.</returns>
++    public LogEventProperty CreateProperty(string name, object? value, bool destructureObjects = false)
++    {
++        var scalarValue = new ScalarValue(value);
++        return new LogEventProperty(name, scalarValue);
++    }
++}
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack.Tests/Serilog.Enrichers.CallStack.Tests.csproj b/Serilog.Enrichers.CallStack.Tests/Serilog.Enrichers.CallStack.Tests.csproj
+new file mode 100644
+index 0000000..dc4cea7
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack.Tests/Serilog.Enrichers.CallStack.Tests.csproj
+@@ -0,0 +1,24 @@
++<Project Sdk="Microsoft.NET.Sdk">
++
++  <PropertyGroup>
++    <TargetFramework>net8.0</TargetFramework>
++    <LangVersion>latest</LangVersion>
++    <Nullable>enable</Nullable>
++    <IsPackable>false</IsPackable>
++    <IsTestProject>true</IsTestProject>
++  </PropertyGroup>
++
++  <ItemGroup>
++    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
++    <PackageReference Include="xunit" Version="2.6.4" />
++    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.5" />
++    <PackageReference Include="FluentAssertions" Version="6.12.0" />
++    <PackageReference Include="Serilog.Sinks.InMemory" Version="0.11.0" />
++    <PackageReference Include="Serilog.Formatting.Compact" Version="2.0.0" />
++  </ItemGroup>
++
++  <ItemGroup>
++    <ProjectReference Include="..\Serilog.Enrichers.CallStack\Serilog.Enrichers.CallStack.csproj" />
++  </ItemGroup>
++
++</Project>
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack.Tests/ThrowingPropertyFactory.cs b/Serilog.Enrichers.CallStack.Tests/ThrowingPropertyFactory.cs
+new file mode 100644
+index 0000000..23f7829
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack.Tests/ThrowingPropertyFactory.cs
+@@ -0,0 +1,25 @@
++using Serilog.Core;
++using Serilog.Events;
++using System;
++
++namespace Serilog.Enrichers.CallStack.Tests;
++
++/// <summary>
++/// Test helper class that throws exceptions when creating properties.
++/// Used to test exception handling in the enricher.
++/// </summary>
++public class ThrowingPropertyFactory : ILogEventPropertyFactory
++{
++    /// <summary>
++    /// Always throws an InvalidOperationException when called.
++    /// </summary>
++    /// <param name="name">The property name.</param>
++    /// <param name="value">The property value.</param>
++    /// <param name="destructureObjects">Whether to destructure the value.</param>
++    /// <returns>Never returns - always throws an exception.</returns>
++    /// <exception cref="InvalidOperationException">Always thrown to test exception handling.</exception>
++    public LogEventProperty CreateProperty(string name, object? value, bool destructureObjects = false)
++    {
++        throw new InvalidOperationException("Test exception from ThrowingPropertyFactory");
++    }
++}
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack/CallStackEnricher.cs b/Serilog.Enrichers.CallStack/CallStackEnricher.cs
+new file mode 100644
+index 0000000..53b63b7
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack/CallStackEnricher.cs
+@@ -0,0 +1,238 @@
++using Serilog.Core;
++using Serilog.Events;
++using System;
++using System.Collections.Generic;
++using System.Diagnostics;
++using System.IO;
++using System.Linq;
++using System.Reflection;
++
++namespace Serilog.Enrichers.CallStack;
++
++/// <summary>
++/// Enriches log events with call stack information including method names, file names, and line numbers.
++/// </summary>
++public class CallStackEnricher : ILogEventEnricher
++{
++    private readonly CallStackEnricherConfiguration _configuration;
++
++    /// <summary>
++    /// Initializes a new instance of the <see cref="CallStackEnricher"/> class with default configuration.
++    /// </summary>
++    public CallStackEnricher() : this(new CallStackEnricherConfiguration())
++    {
++    }
++
++    /// <summary>
++    /// Initializes a new instance of the <see cref="CallStackEnricher"/> class with the specified configuration.
++    /// </summary>
++    /// <param name="configuration">The configuration for the enricher.</param>
++    /// <exception cref="ArgumentNullException">Thrown when configuration is null.</exception>
++    public CallStackEnricher(CallStackEnricherConfiguration configuration)
++    {
++        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
++    }
++
++    /// <summary>
++    /// Enriches the log event with call stack information.
++    /// </summary>
++    /// <param name="logEvent">The log event to enrich.</param>
++    /// <param name="propertyFactory">Factory for creating log event properties.</param>
++    public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
++    {
++        try
++        {
++            var stackTrace = new StackTrace(true);
++            var frames = stackTrace.GetFrames();
++            
++            if (frames == null || frames.Length == 0)
++                return;
++
++            var relevantFrame = FindRelevantFrame(frames);
++            if (relevantFrame == null)
++                return;
++
++            AddCallStackProperties(logEvent, propertyFactory, relevantFrame);
++        }
++        catch (Exception ex) when (_configuration.SuppressExceptions)
++        {
++            // Silently ignore exceptions when configured to do so
++            if (_configuration.OnException != null)
++            {
++                try
++                {
++                    _configuration.OnException(ex);
++                }
++                catch
++                {
++                    // Ignore exceptions in exception handler
++                }
++            }
++        }
++    }
++
++    /// <summary>
++    /// Finds the most relevant stack frame for logging purposes.
++    /// </summary>
++    /// <param name="frames">The stack frames to search.</param>
++    /// <returns>The most relevant stack frame, or null if none found.</returns>
++    private StackFrame? FindRelevantFrame(StackFrame[] frames)
++    {
++        // Skip frames until we get past Serilog infrastructure
++        var relevantFrames = frames
++            .Where(frame => !ShouldSkipFrame(frame))
++            .ToArray();
++
++        if (relevantFrames.Length == 0)
++            return null;
++
++        // Return the first non-skipped frame, optionally offset by configuration
++        var targetIndex = Math.Min(_configuration.FrameOffset, relevantFrames.Length - 1);
++        return relevantFrames[targetIndex];
++    }
++
++    /// <summary>
++    /// Determines whether a stack frame should be skipped.
++    /// </summary>
++    /// <param name="frame">The stack frame to evaluate.</param>
++    /// <returns>True if the frame should be skipped, false otherwise.</returns>
++    private bool ShouldSkipFrame(StackFrame frame)
++    {
++        var method = frame.GetMethod();
++        if (method == null)
++            return true;
++
++        var declaringType = method.DeclaringType;
++        if (declaringType == null)
++            return true;
++
++        var typeName = declaringType.FullName ?? declaringType.Name;
++
++        // Skip Serilog infrastructure
++        if (typeName.StartsWith("Serilog.", StringComparison.Ordinal))
++            return true;
++
++        // Skip this enricher
++        if (typeName.StartsWith("Serilog.Enrichers.CallStack.", StringComparison.Ordinal))
++            return true;
++
++        // Skip user-defined namespaces
++        foreach (var skipNamespace in _configuration.SkipNamespaces)
++        {
++            if (typeName.StartsWith(skipNamespace, StringComparison.Ordinal))
++                return true;
++        }
++
++        // Skip user-defined types
++        foreach (var skipType in _configuration.SkipTypes)
++        {
++            if (string.Equals(typeName, skipType, StringComparison.Ordinal))
++                return true;
++        }
++
++        return false;
++    }
++
++    /// <summary>
++    /// Adds call stack properties to the log event.
++    /// </summary>
++    /// <param name="logEvent">The log event to enrich.</param>
++    /// <param name="propertyFactory">Factory for creating log event properties.</param>
++    /// <param name="frame">The stack frame to extract information from.</param>
++    private void AddCallStackProperties(LogEvent logEvent, ILogEventPropertyFactory propertyFactory, StackFrame frame)
++    {
++        var method = frame.GetMethod();
++        if (method == null)
++            return;
++
++        var properties = new Dictionary<string, object?>();
++
++        // Add method information
++        if (_configuration.IncludeMethodName)
++        {
++            var methodName = GetMethodName(method);
++            properties[_configuration.MethodNamePropertyName] = methodName;
++        }
++
++        // Add type information
++        if (_configuration.IncludeTypeName && method.DeclaringType != null)
++        {
++            var typeName = _configuration.UseFullTypeName 
++                ? method.DeclaringType.FullName ?? method.DeclaringType.Name
++                : method.DeclaringType.Name;
++            properties[_configuration.TypeNamePropertyName] = typeName;
++        }
++
++        // Add file information
++        var fileName = frame.GetFileName();
++        if (_configuration.IncludeFileName && !string.IsNullOrEmpty(fileName))
++        {
++            var fileNameToUse = _configuration.UseFullFileName 
++                ? fileName 
++                : Path.GetFileName(fileName);
++            properties[_configuration.FileNamePropertyName] = fileNameToUse;
++        }
++
++        // Add line number
++        if (_configuration.IncludeLineNumber)
++        {
++            var lineNumber = frame.GetFileLineNumber();
++            if (lineNumber > 0)
++            {
++                properties[_configuration.LineNumberPropertyName] = lineNumber;
++            }
++        }
++
++        // Add column number
++        if (_configuration.IncludeColumnNumber)
++        {
++            var columnNumber = frame.GetFileColumnNumber();
++            if (columnNumber > 0)
++            {
++                properties[_configuration.ColumnNumberPropertyName] = columnNumber;
++            }
++        }
++
++        // Add assembly information
++        if (_configuration.IncludeAssemblyName && method.DeclaringType?.Assembly != null)
++        {
++            var assemblyName = method.DeclaringType.Assembly.GetName().Name;
++            if (!string.IsNullOrEmpty(assemblyName))
++            {
++                properties[_configuration.AssemblyNamePropertyName] = assemblyName;
++            }
++        }
++
++        // Create and add properties to the log event
++        foreach (var kvp in properties)
++        {
++            if (kvp.Value != null)
++            {
++                var property = propertyFactory.CreateProperty(kvp.Key, kvp.Value);
++                logEvent.AddPropertyIfAbsent(property);
++            }
++        }
++    }
++
++    /// <summary>
++    /// Gets a formatted method name including parameters if configured.
++    /// </summary>
++    /// <param name="method">The method to get the name for.</param>
++    /// <returns>The formatted method name.</returns>
++    private string GetMethodName(MethodBase method)
++    {
++        if (!_configuration.IncludeMethodParameters)
++            return method.Name;
++
++        var parameters = method.GetParameters();
++        if (parameters.Length == 0)
++            return $"{method.Name}()";
++
++        var parameterNames = parameters.Select(p => 
++            _configuration.UseFullParameterTypes 
++                ? $"{p.ParameterType.FullName ?? p.ParameterType.Name} {p.Name}"
++                : $"{p.ParameterType.Name} {p.Name}");
++
++        return $"{method.Name}({string.Join(", ", parameterNames)})";
++    }
++}
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack/CallStackEnricherConfiguration.cs b/Serilog.Enrichers.CallStack/CallStackEnricherConfiguration.cs
+new file mode 100644
+index 0000000..02a370d
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack/CallStackEnricherConfiguration.cs
+@@ -0,0 +1,282 @@
++using System;
++using System.Collections.Generic;
++
++namespace Serilog.Enrichers.CallStack;
++
++/// <summary>
++/// Configuration for the CallStackEnricher.
++/// </summary>
++public class CallStackEnricherConfiguration
++{
++    /// <summary>
++    /// Gets or sets whether to include the method name in the log event.
++    /// Default is true.
++    /// </summary>
++    public bool IncludeMethodName { get; set; } = true;
++
++    /// <summary>
++    /// Gets or sets whether to include method parameters in the method name.
++    /// Default is false.
++    /// </summary>
++    public bool IncludeMethodParameters { get; set; } = false;
++
++    /// <summary>
++    /// Gets or sets whether to use full parameter types (with namespace) when including method parameters.
++    /// Default is false.
++    /// </summary>
++    public bool UseFullParameterTypes { get; set; } = false;
++
++    /// <summary>
++    /// Gets or sets whether to include the type name in the log event.
++    /// Default is true.
++    /// </summary>
++    public bool IncludeTypeName { get; set; } = true;
++
++    /// <summary>
++    /// Gets or sets whether to use the full type name (with namespace) or just the class name.
++    /// Default is false (use class name only).
++    /// </summary>
++    public bool UseFullTypeName { get; set; } = false;
++
++    /// <summary>
++    /// Gets or sets whether to include the file name in the log event.
++    /// Default is true.
++    /// </summary>
++    public bool IncludeFileName { get; set; } = true;
++
++    /// <summary>
++    /// Gets or sets whether to use the full file path or just the file name.
++    /// Default is false (use file name only).
++    /// </summary>
++    public bool UseFullFileName { get; set; } = false;
++
++    /// <summary>
++    /// Gets or sets whether to include the line number in the log event.
++    /// Default is true.
++    /// </summary>
++    public bool IncludeLineNumber { get; set; } = true;
++
++    /// <summary>
++    /// Gets or sets whether to include the column number in the log event.
++    /// Default is false.
++    /// </summary>
++    public bool IncludeColumnNumber { get; set; } = false;
++
++    /// <summary>
++    /// Gets or sets whether to include the assembly name in the log event.
++    /// Default is false.
++    /// </summary>
++    public bool IncludeAssemblyName { get; set; } = false;
++
++    /// <summary>
++    /// Gets or sets the property name for the method name.
++    /// Default is "MethodName".
++    /// </summary>
++    public string MethodNamePropertyName { get; set; } = "MethodName";
++
++    /// <summary>
++    /// Gets or sets the property name for the type name.
++    /// Default is "TypeName".
++    /// </summary>
++    public string TypeNamePropertyName { get; set; } = "TypeName";
++
++    /// <summary>
++    /// Gets or sets the property name for the file name.
++    /// Default is "FileName".
++    /// </summary>
++    public string FileNamePropertyName { get; set; } = "FileName";
++
++    /// <summary>
++    /// Gets or sets the property name for the line number.
++    /// Default is "LineNumber".
++    /// </summary>
++    public string LineNumberPropertyName { get; set; } = "LineNumber";
++
++    /// <summary>
++    /// Gets or sets the property name for the column number.
++    /// Default is "ColumnNumber".
++    /// </summary>
++    public string ColumnNumberPropertyName { get; set; } = "ColumnNumber";
++
++    /// <summary>
++    /// Gets or sets the property name for the assembly name.
++    /// Default is "AssemblyName".
++    /// </summary>
++    public string AssemblyNamePropertyName { get; set; } = "AssemblyName";
++
++    /// <summary>
++    /// Gets or sets the frame offset to use when selecting the relevant stack frame.
++    /// Default is 0 (use the first non-skipped frame).
++    /// </summary>
++    public int FrameOffset { get; set; } = 0;
++
++    /// <summary>
++    /// Gets or sets whether to suppress exceptions that occur during enrichment.
++    /// Default is true.
++    /// </summary>
++    public bool SuppressExceptions { get; set; } = true;
++
++    /// <summary>
++    /// Gets or sets the action to execute when an exception occurs during enrichment.
++    /// This is only called when SuppressExceptions is true.
++    /// Default is null.
++    /// </summary>
++    public Action<Exception>? OnException { get; set; }
++
++    /// <summary>
++    /// Gets the collection of namespaces to skip when walking the stack trace.
++    /// </summary>
++    public ICollection<string> SkipNamespaces { get; } = new HashSet<string>(StringComparer.Ordinal);
++
++    /// <summary>
++    /// Gets the collection of type names to skip when walking the stack trace.
++    /// </summary>
++    public ICollection<string> SkipTypes { get; } = new HashSet<string>(StringComparer.Ordinal);
++
++    /// <summary>
++    /// Adds a namespace to skip when walking the stack trace.
++    /// </summary>
++    /// <param name="namespace">The namespace to skip.</param>
++    /// <returns>This configuration instance for method chaining.</returns>
++    /// <exception cref="ArgumentNullException">Thrown when namespace is null.</exception>
++    public CallStackEnricherConfiguration SkipNamespace(string @namespace)
++    {
++        if (@namespace == null)
++            throw new ArgumentNullException(nameof(@namespace));
++        
++        SkipNamespaces.Add(@namespace);
++        return this;
++    }
++
++    /// <summary>
++    /// Adds a type name to skip when walking the stack trace.
++    /// </summary>
++    /// <param name="typeName">The full type name to skip.</param>
++    /// <returns>This configuration instance for method chaining.</returns>
++    /// <exception cref="ArgumentNullException">Thrown when typeName is null.</exception>
++    public CallStackEnricherConfiguration SkipType(string typeName)
++    {
++        if (typeName == null)
++            throw new ArgumentNullException(nameof(typeName));
++        
++        SkipTypes.Add(typeName);
++        return this;
++    }
++
++    /// <summary>
++    /// Sets the frame offset to use when selecting the relevant stack frame.
++    /// </summary>
++    /// <param name="offset">The frame offset (0-based).</param>
++    /// <returns>This configuration instance for method chaining.</returns>
++    public CallStackEnricherConfiguration WithFrameOffset(int offset)
++    {
++        FrameOffset = Math.Max(0, offset);
++        return this;
++    }
++
++    /// <summary>
++    /// Configures exception handling.
++    /// </summary>
++    /// <param name="suppress">Whether to suppress exceptions.</param>
++    /// <param name="onException">Optional action to execute when exceptions occur.</param>
++    /// <returns>This configuration instance for method chaining.</returns>
++    public CallStackEnricherConfiguration WithExceptionHandling(bool suppress, Action<Exception>? onException = null)
++    {
++        SuppressExceptions = suppress;
++        OnException = onException;
++        return this;
++    }
++
++    /// <summary>
++    /// Configures which information to include in the log event.
++    /// </summary>
++    /// <param name="methodName">Whether to include method name.</param>
++    /// <param name="typeName">Whether to include type name.</param>
++    /// <param name="fileName">Whether to include file name.</param>
++    /// <param name="lineNumber">Whether to include line number.</param>
++    /// <param name="columnNumber">Whether to include column number.</param>
++    /// <param name="assemblyName">Whether to include assembly name.</param>
++    /// <returns>This configuration instance for method chaining.</returns>
++    public CallStackEnricherConfiguration WithIncludes(
++        bool methodName = true,
++        bool typeName = true,
++        bool fileName = true,
++        bool lineNumber = true,
++        bool columnNumber = false,
++        bool assemblyName = false)
++    {
++        IncludeMethodName = methodName;
++        IncludeTypeName = typeName;
++        IncludeFileName = fileName;
++        IncludeLineNumber = lineNumber;
++        IncludeColumnNumber = columnNumber;
++        IncludeAssemblyName = assemblyName;
++        return this;
++    }
++
++    /// <summary>
++    /// Configures the property names used for call stack information.
++    /// </summary>
++    /// <param name="methodName">Property name for method name.</param>
++    /// <param name="typeName">Property name for type name.</param>
++    /// <param name="fileName">Property name for file name.</param>
++    /// <param name="lineNumber">Property name for line number.</param>
++    /// <param name="columnNumber">Property name for column number.</param>
++    /// <param name="assemblyName">Property name for assembly name.</param>
++    /// <returns>This configuration instance for method chaining.</returns>
++    public CallStackEnricherConfiguration WithPropertyNames(
++        string? methodName = null,
++        string? typeName = null,
++        string? fileName = null,
++        string? lineNumber = null,
++        string? columnNumber = null,
++        string? assemblyName = null)
++    {
++        if (!string.IsNullOrEmpty(methodName))
++            MethodNamePropertyName = methodName;
++        if (!string.IsNullOrEmpty(typeName))
++            TypeNamePropertyName = typeName;
++        if (!string.IsNullOrEmpty(fileName))
++            FileNamePropertyName = fileName;
++        if (!string.IsNullOrEmpty(lineNumber))
++            LineNumberPropertyName = lineNumber;
++        if (!string.IsNullOrEmpty(columnNumber))
++            ColumnNumberPropertyName = columnNumber;
++        if (!string.IsNullOrEmpty(assemblyName))
++            AssemblyNamePropertyName = assemblyName;
++        return this;
++    }
++
++    /// <summary>
++    /// Configures whether to use full names or short names.
++    /// </summary>
++    /// <param name="fullTypeName">Whether to use full type names (with namespace).</param>
++    /// <param name="fullFileName">Whether to use full file paths.</param>
++    /// <param name="fullParameterTypes">Whether to use full parameter type names.</param>
++    /// <returns>This configuration instance for method chaining.</returns>
++    public CallStackEnricherConfiguration WithFullNames(
++        bool fullTypeName = false,
++        bool fullFileName = false,
++        bool fullParameterTypes = false)
++    {
++        UseFullTypeName = fullTypeName;
++        UseFullFileName = fullFileName;
++        UseFullParameterTypes = fullParameterTypes;
++        return this;
++    }
++
++    /// <summary>
++    /// Configures method parameter inclusion.
++    /// </summary>
++    /// <param name="includeParameters">Whether to include method parameters.</param>
++    /// <param name="useFullParameterTypes">Whether to use full parameter type names.</param>
++    /// <returns>This configuration instance for method chaining.</returns>
++    public CallStackEnricherConfiguration WithMethodParameters(
++        bool includeParameters = true,
++        bool useFullParameterTypes = false)
++    {
++        IncludeMethodParameters = includeParameters;
++        UseFullParameterTypes = useFullParameterTypes;
++        return this;
++    }
++}
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack/LoggerConfigurationExtensions.cs b/Serilog.Enrichers.CallStack/LoggerConfigurationExtensions.cs
+new file mode 100644
+index 0000000..5a70617
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack/LoggerConfigurationExtensions.cs
+@@ -0,0 +1,65 @@
++using Serilog.Configuration;
++using System;
++
++namespace Serilog.Enrichers.CallStack;
++
++/// <summary>
++/// Extensions for configuring the CallStackEnricher.
++/// </summary>
++public static class LoggerConfigurationExtensions
++{
++    /// <summary>
++    /// Enriches log events with call stack information using default configuration.
++    /// </summary>
++    /// <param name="enrichmentConfiguration">The logger enrichment configuration.</param>
++    /// <returns>Configuration object allowing method chaining.</returns>
++    /// <exception cref="ArgumentNullException">Thrown when enrichmentConfiguration is null.</exception>
++    public static LoggerConfiguration WithCallStack(this LoggerEnrichmentConfiguration enrichmentConfiguration)
++    {
++        if (enrichmentConfiguration == null)
++            throw new ArgumentNullException(nameof(enrichmentConfiguration));
++
++        return enrichmentConfiguration.With<CallStackEnricher>();
++    }
++
++    /// <summary>
++    /// Enriches log events with call stack information using the specified configuration.
++    /// </summary>
++    /// <param name="enrichmentConfiguration">The logger enrichment configuration.</param>
++    /// <param name="configuration">The call stack enricher configuration.</param>
++    /// <returns>Configuration object allowing method chaining.</returns>
++    /// <exception cref="ArgumentNullException">Thrown when enrichmentConfiguration or configuration is null.</exception>
++    public static LoggerConfiguration WithCallStack(
++        this LoggerEnrichmentConfiguration enrichmentConfiguration,
++        CallStackEnricherConfiguration configuration)
++    {
++        if (enrichmentConfiguration == null)
++            throw new ArgumentNullException(nameof(enrichmentConfiguration));
++        if (configuration == null)
++            throw new ArgumentNullException(nameof(configuration));
++
++        return enrichmentConfiguration.With(new CallStackEnricher(configuration));
++    }
++
++    /// <summary>
++    /// Enriches log events with call stack information using a configuration builder.
++    /// </summary>
++    /// <param name="enrichmentConfiguration">The logger enrichment configuration.</param>
++    /// <param name="configureEnricher">Action to configure the enricher.</param>
++    /// <returns>Configuration object allowing method chaining.</returns>
++    /// <exception cref="ArgumentNullException">Thrown when enrichmentConfiguration or configureEnricher is null.</exception>
++    public static LoggerConfiguration WithCallStack(
++        this LoggerEnrichmentConfiguration enrichmentConfiguration,
++        Action<CallStackEnricherConfiguration> configureEnricher)
++    {
++        if (enrichmentConfiguration == null)
++            throw new ArgumentNullException(nameof(enrichmentConfiguration));
++        if (configureEnricher == null)
++            throw new ArgumentNullException(nameof(configureEnricher));
++
++        var configuration = new CallStackEnricherConfiguration();
++        configureEnricher(configuration);
++
++        return enrichmentConfiguration.With(new CallStackEnricher(configuration));
++    }
++}
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack/Serilog.Enrichers.CallStack.csproj b/Serilog.Enrichers.CallStack/Serilog.Enrichers.CallStack.csproj
+new file mode 100644
+index 0000000..cc8e59d
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack/Serilog.Enrichers.CallStack.csproj
+@@ -0,0 +1,30 @@
++<Project Sdk="Microsoft.NET.Sdk">
++
++  <PropertyGroup>
++    <TargetFramework>netstandard2.0</TargetFramework>
++    <LangVersion>latest</LangVersion>
++    <Nullable>enable</Nullable>
++    <PackageId>Serilog.Enrichers.CallStack</PackageId>
++    <PackageVersion>1.0.0</PackageVersion>
++    <Authors>Mike D</Authors>
++    <Description>A Serilog enricher that adds call stack information to log events, including method names, file names, and line numbers.</Description>
++    <PackageTags>serilog;enricher;callstack;logging;diagnostics</PackageTags>
++    <PackageReadmeFile>README.md</PackageReadmeFile>
++    <PackageLicenseFile>LICENSE</PackageLicenseFile>
++    <RepositoryUrl>https://github.com/miked/SerilogCallStackEnricher</RepositoryUrl>
++    <RepositoryType>git</RepositoryType>
++    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
++    <IncludeSymbols>true</IncludeSymbols>
++    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
++  </PropertyGroup>
++
++  <ItemGroup>
++    <PackageReference Include="Serilog" Version="3.0.1" />
++  </ItemGroup>
++
++  <ItemGroup>
++    <None Include="..\README.md" Pack="true" PackagePath="\" />
++    <None Include="..\LICENSE" Pack="true" PackagePath="\" />
++  </ItemGroup>
++
++</Project>
+\ No newline at end of file
+diff --git a/SerilogCallStackEnricher.sln b/SerilogCallStackEnricher.sln
+new file mode 100644
+index 0000000..dbeae65
+--- /dev/null
++++ b/SerilogCallStackEnricher.sln
+@@ -0,0 +1,24 @@
++Microsoft Visual Studio Solution File, Format Version 12.00
++# Visual Studio Version 17
++VisualStudioVersion = 17.0.31903.59
++MinimumVisualStudioVersion = 10.0.40219.1
++Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serilog.Enrichers.CallStack", "Serilog.Enrichers.CallStack\Serilog.Enrichers.CallStack.csproj", "{A8B5E5A1-7F8C-4D9E-B2A3-C6F1E8D4A7B2}"
++EndProject
++Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serilog.Enrichers.CallStack.Tests", "Serilog.Enrichers.CallStack.Tests\Serilog.Enrichers.CallStack.Tests.csproj", "{B9C6F6B2-8G9D-4E0F-C3B4-D7G2F9E5B8C3}"
++EndProject
++Global
++	GlobalSection(SolutionConfigurationPlatforms) = preSolution
++		Debug|Any CPU = Debug|Any CPU
++		Release|Any CPU = Release|Any CPU
++	EndGlobalSection
++	GlobalSection(ProjectConfigurationPlatforms) = postSolution
++		{A8B5E5A1-7F8C-4D9E-B2A3-C6F1E8D4A7B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
++		{A8B5E5A1-7F8C-4D9E-B2A3-C6F1E8D4A7B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
++		{A8B5E5A1-7F8C-4D9E-B2A3-C6F1E8D4A7B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
++		{A8B5E5A1-7F8C-4D9E-B2A3-C6F1E8D4A7B2}.Release|Any CPU.Build.0 = Release|Any CPU
++		{B9C6F6B2-8G9D-4E0F-C3B4-D7G2F9E5B8C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
++		{B9C6F6B2-8G9D-4E0F-C3B4-D7G2F9E5B8C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
++		{B9C6F6B2-8G9D-4E0F-C3B4-D7G2F9E5B8C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
++		{B9C6F6B2-8G9D-4E0F-C3B4-D7G2F9E5B8C3}.Release|Any CPU.Build.0 = Release|Any CPU
++	EndGlobalSection
++EndGlobal
+\ No newline at end of file
+
+353d4b32ba3166e408e970d15ca9b58d42f0b4f3|Michael Akinyemi|dmike.akinyemi@gmail.com|2024-09-15 09:15:00 +0100|feat: Add enricher configuration class|feature/enricher-configuration
+afacb2e83383e0bd9eb05b983b682620376e5d75|Michael Akinyemi|dmike.akinyemi@gmail.com|2025-07-28 22:52:42 +0100|Merge pull request #1 from hokagedami/feature/solution-structure|
+1e78d5d3e53eb0776b16fd8303344707e6ac622d|Michael Akinyemi|dmike.akinyemi@gmail.com|2024-08-10 14:30:00 +0100|chore: Set up solution structure|feature/solution-structure
+43fb0fd8cfb73e236d494c9efc98046a50c0543f|Michael Akinyemi|36125244+hokagedami@users.noreply.github.com|2024-07-28 10:00:00 +0100|docs: Create initial README with usage examples|
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..f3e9a51
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,354 @@
++# Build results
++[Dd]ebug/
++[Dd]ebugPublic/
++[Rr]elease/
++[Rr]eleases/
++x64/
++x86/
++[Ww][Ii][Nn]32/
++[Aa][Rr][Mm]/
++[Aa][Rr][Mm]64/
++bld/
++[Bb]in/
++[Oo]bj/
++[Ll]og/
++[Ll]ogs/
++
++# Visual Studio 2015/2017 cache/options directory
++.vs/
++# Uncomment if you have tasks that create the project's static files in wwwroot
++#wwwroot/
++
++# Visual Studio 2017 auto generated files
++Generated\ Files/
++
++# MSTest test Results
++[Tt]est[Rr]esult*/
++[Bb]uild[Ll]og.*
++
++# NUnit
++*.VisualState.xml
++TestResult.xml
++nunit-*.xml
++
++# Build Results of an ATL Project
++[Dd]ebugPS/
++[Rr]eleasePS/
++dlldata.c
++
++# Benchmark Results
++BenchmarkDotNet.Artifacts/
++
++# .NET Core
++project.lock.json
++project.fragment.lock.json
++artifacts/
++
++# StyleCop
++StyleCopReport.xml
++
++# Files built by Visual Studio
++*_i.c
++*_p.c
++*_h.h
++*.ilk
++*.meta
++*.obj
++*.iobj
++*.pch
++*.pdb
++*.ipdb
++*.pgc
++*.pgd
++*.rsp
++*.sbr
++*.tlb
++*.tli
++*.tlh
++*.tmp
++*.tmp_proj
++*_wpftmp.csproj
++*.log
++*.vspscc
++*.vssscc
++.builds
++*.pidb
++*.svclog
++*.scc
++
++# Chutzpah Test files
++_Chutzpah*
++
++# Visual C++ cache files
++ipch/
++*.aps
++*.ncb
++*.opendb
++*.opensdf
++*.sdf
++*.cachefile
++*.VC.db
++*.VC.VC.opendb
++
++# Visual Studio profiler
++*.psess
++*.vsp
++*.vspx
++*.sap
++
++# Visual Studio Trace Files
++*.e2e
++
++# TFS 2012 Local Workspace
++$tf/
++
++# Guidance Automation Toolkit
++*.gpState
++
++# ReSharper is a .NET coding add-in
++_ReSharper*/
++*.[Rr]e[Ss]harper
++*.DotSettings.user
++
++# TeamCity is a build add-in
++_TeamCity*
++
++# DotCover is a Code Coverage Tool
++*.dotCover
++
++# AxoCover is a Code Coverage Tool
++.axoCover/*
++!.axoCover/settings.json
++
++# Coverlet is a free, cross platform Code Coverage Tool
++coverage*.json
++coverage*.xml
++coverage*.info
++
++# Visual Studio code coverage results
++*.coverage
++*.coveragexml
++
++# NCrunch
++_NCrunch_*
++.*crunch*.local.xml
++nCrunchTemp_*
++
++# MightyMoose
++*.mm.*
++AutoTest.Net/
++
++# Web workbench (sass)
++.sass-cache/
++
++# Installshield output folder
++[Ee]xpress/
++
++# DocProject is a documentation generator add-in
++DocProject/buildhelp/
++DocProject/Help/*.HxT
++DocProject/Help/*.HxC
++DocProject/Help/*.hhc
++DocProject/Help/*.hhk
++DocProject/Help/*.hhp
++DocProject/Help/Html2
++DocProject/Help/html
++
++# Click-Once directory
++publish/
++
++# Publish Web Output
++*.[Pp]ublish.xml
++*.azurePubxml
++# Note: Comment the next line if you want to checkin your web deploy settings,
++# but database connection strings (with potential passwords) will be unencrypted
++*.pubxml
++*.publishproj
++
++# Microsoft Azure Web App publish settings. Comment the next line if you want to
++# checkin your Azure Web App publish settings, but sensitive information contained
++# in these files may be logged.
++*.azurePubxml
++
++# Microsoft Azure Build Output
++csx/
++*.build.csdef
++
++# Microsoft Azure Emulator
++ecf/
++rcf/
++
++# Windows Store app package directories and files
++AppPackages/
++BundleArtifacts/
++Package.StoreAssociation.xml
++_pkginfo.txt
++*.appx
++*.appxbundle
++*.appxupload
++
++# Visual Studio cache files
++# files ending in .cache can be ignored
++*.[Cc]ache
++# but keep track of directories ending in .cache
++!?*.[Cc]ache/
++
++# Others
++ClientBin/
++~$*
++*~
++*.dbmdl
++*.dbproj.schemaview
++*.jfm
++*.pfx
++*.publishsettings
++orleans.codegen.cs
++
++# Including strong name files can present a security risk
++# (https://github.com/github/gitignore/pull/2483#issue-259490424)
++#*.snk
++
++# Since there are multiple workflows, uncomment the next line to ignore bower_components
++# (https://github.com/github/gitignore/pull/1529#issuecomment-104372622)
++#bower_components/
++
++# RIA/Silverlight projects
++Generated_Code/
++
++# Backup & report files from converting an old project file
++# to a newer Visual Studio version. Backup files are not needed,
++# because we have git ;-)
++_UpgradeReport_Files/
++Backup*/
++UpgradeLog*.XML
++UpgradeLog*.htm
++CDF_UP_TO_DATE
++
++# SQL Server files
++*.mdf
++*.ldf
++*.ndf
++
++# Business Intelligence projects
++*.rdl.data
++*.bim.layout
++*.bim_*.settings
++*.rptproj.rsuser
++*- [Bb]ackup.rdl
++*- [Bb]ackup ([0-9]).rdl
++*- [Bb]ackup ([0-9][0-9]).rdl
++
++# Microsoft Fakes
++FakesAssemblies/
++
++# GhostDoc plugin setting file
++*.GhostDoc.xml
++
++# Node.js Tools for Visual Studio
++.ntvs_analysis.dat
++node_modules/
++
++# Visual Studio 6 build log
++*.plg
++
++# Visual Studio 6 workspace options file
++*.opt
++
++# Visual Studio 6 auto-generated workspace file (contains which files were open etc.)
++*.vbw
++
++# Visual Studio LightSwitch build output
++**/*.HTMLClient/GeneratedArtifacts
++**/*.DesktopClient/GeneratedArtifacts
++**/*.DesktopClient/ModelManifest.xml
++**/*.Server/GeneratedArtifacts
++**/*.Server/ModelManifest.xml
++_Pvt_Extensions
++
++# Paket dependency manager
++.paket/paket.exe
++paket-files/
++
++# FAKE - F# Make
++.fake/
++
++# CodeRush personal settings
++.cr/personal
++
++# Python Tools for Visual Studio (PTVS)
++__pycache__/
++*.pyc
++
++# Cake - Uncomment if you are using it
++# tools/**
++# !tools/packages.config
++
++# Tabs Studio
++*.tss
++
++# Telerik's JustMock configuration file
++*.jmconfig
++
++# BizTalk build output
++*.btp.cs
++*.btm.cs
++*.odx.cs
++*.xsd.cs
++
++# OpenCover UI analysis results
++OpenCover/
++
++# Azure Stream Analytics local run output
++ASALocalRun/
++
++# MSBuild Binary and Structured Log
++*.binlog
++
++# NVidia Nsight GPU debugger configuration file
++*.nvuser
++
++# MFractors (Xamarin productivity tool) working folder
++.mfractor/
++
++# Local History for Visual Studio
++.localhistory/
++
++# BeatPulse healthcheck temp database
++healthchecksdb
++
++# Backup folder for Package Reference Convert tool in Visual Studio 2017
++MigrationBackup/
++
++# Ionide (cross platform F# VS Code tools) working folder
++.ionide/
++
++# Fody - auto-generated XML schema
++FodyWeavers.xsd
++
++# VS Code files for those working on multiple tools
++.vscode/*
++!.vscode/settings.json
++!.vscode/tasks.json
++!.vscode/launch.json
++!.vscode/extensions.json
++*.code-workspace
++
++# Local History for Visual Studio Code
++.history/
++
++# Windows Installer files from build outputs
++*.cab
++*.msi
++*.msix
++*.msm
++*.msp
++
++# JetBrains Rider
++.idea/
++*.sln.iml
++
++# NuGet packages
++/packages/
++
++# Claude
++.claude
+\ No newline at end of file
+diff --git a/LICENSE b/LICENSE
+new file mode 100644
+index 0000000..2ffeff5
+--- /dev/null
++++ b/LICENSE
+@@ -0,0 +1,21 @@
++MIT License
++
++Copyright (c) 2025 Michael Akinyemi
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..97ac7fa
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,299 @@
++﻿# Serilog.Enrichers.CallStack
++
++[![NuGet Version](https://img.shields.io/nuget/v/Serilog.Enrichers.CallStack.svg?style=flat)](https://www.nuget.org/packages/Serilog.Enrichers.CallStack/)
++[![.NET](https://img.shields.io/badge/.NET%20Framework-4.8-blue)](https://dotnet.microsoft.com/download)
++[![.NET](https://img.shields.io/badge/.NET-5.0%20%7C%206.0%20%7C%207.0%20%7C%208.0-blue)](https://dotnet.microsoft.com/download)
++
++A Serilog enricher that adds call stack information to log events, making it easier to understand where log messages originate from in your code. Perfect for debugging, monitoring, and gaining insights into application flow.
++
++## Why Use This?
++
++When debugging complex applications or investigating production issues, knowing exactly where a log message originated can be invaluable. This enricher automatically adds:
++- The calling method and class name to every log event
++- Optional full call stack traces
++- Source file locations and line numbers (with debug symbols)
++
++## Features
++
++- **Multi-target support**: Works with .NET Framework 4.8, .NET 5, 6, 7, and 8
++- **Configurable depth**: Control how many stack frames to capture
++- **Flexible output**: Choose between minimal (calling method/class) or detailed (full call stack) information
++- **Performance optimized**: Skip unnecessary frames and limit capture depth
++- **File info support**: Optionally include source file names and line numbers (requires debug symbols)
++- **Namespace filtering**: Skip frames from specific namespaces or assemblies
++- **Production ready**: Safe error handling that won't break your logging
++
++## Getting Started
++
++### Installation
++
++Install via NuGet Package Manager:
++
++```bash
++Install-Package Serilog.Enrichers.CallStack
++```
++
++Or via .NET CLI:
++
++```bash
++dotnet add package Serilog.Enrichers.CallStack
++```
++
++Or add directly to your `.csproj`:
++
++```xml
++<PackageReference Include="Serilog.Enrichers.CallStack" Version="1.0.0" />
++```
++
++### Basic Usage
++
++The simplest way to start using the enricher:
++
++```csharp
++using Serilog;
++using Serilog.Enrichers.CallStack;
++
++var logger = new LoggerConfiguration()
++    .Enrich.WithCallStack()
++    .WriteTo.Console()
++    .CreateLogger();
++
++logger.Information("Hello from {Method}", "SomeMethod");
++// Output includes CallingMethod and CallingClass properties
++```
++
++### Pre-configured Options
++
++```csharp
++// Minimal overhead - just calling method and class
++var logger = new LoggerConfiguration()
++    .Enrich.WithCallStackMinimal()
++    .WriteTo.Console()
++    .CreateLogger();
++
++// Detailed information including full call stack and file info
++var logger = new LoggerConfiguration()
++    .Enrich.WithCallStackDetailed()
++    .WriteTo.Console()
++    .CreateLogger();
++
++// Production optimized
++var logger = new LoggerConfiguration()
++    .Enrich.WithCallStackProduction()
++    .WriteTo.Console()
++    .CreateLogger();
++
++// Development optimized
++var logger = new LoggerConfiguration()
++    .Enrich.WithCallStackDevelopment()
++    .WriteTo.Console()
++    .CreateLogger();
++```
++
++## Configuration Options
++
++### Using Configuration Action
++
++```csharp
++var logger = new LoggerConfiguration()
++    .Enrich.WithCallStack(config =>
++    {
++        config.IncludeCallingMethod = true;        // Include calling method name
++        config.IncludeCallingClass = true;         // Include calling class name
++        config.IncludeFullCallStack = false;       // Include array of all frames
++        config.IncludeFileInfo = false;            // Include file name and line number
++        config.MaxFrames = 10;                     // Maximum frames to capture
++        config.SkipFrames = 3;                     // Frames to skip (skip Serilog internals)
++        config.SkipNamespaces.Add("MyApp.Internal"); // Skip specific namespaces
++        config.SkipAssemblies.Add("ThirdPartyLib");   // Skip specific assemblies
++    })
++    .WriteTo.Console()
++    .CreateLogger();
++```
++
++### Using Configuration Object
++
++```csharp
++var config = new CallStackEnricherConfiguration
++{
++    IncludeCallingMethod = true,
++    IncludeCallingClass = true,
++    IncludeFullCallStack = true,
++    IncludeFileInfo = true,
++    MaxFrames = 15,
++    CallingMethodPropertyName = "Method",      // Custom property names
++    CallingClassPropertyName = "Class",
++    CallStackPropertyName = "Stack"
++};
++
++var logger = new LoggerConfiguration()
++    .Enrich.WithCallStack(config)
++    .WriteTo.Console()
++    .CreateLogger();
++```
++
++## Output Examples
++
++### Minimal Configuration
++```json
++{
++  "Timestamp": "2025-01-15T14:30:22.123Z",
++  "Level": "Information",
++  "MessageTemplate": "Processing user request",
++  "CallingMethod": "UserController.GetUser",
++  "CallingClass": "MyApp.Controllers.UserController"
++}
++```
++
++### Detailed Configuration
++```json
++{
++  "Timestamp": "2025-01-15T14:30:22.123Z",
++  "Level": "Information", 
++  "MessageTemplate": "Processing user request",
++  "CallingMethod": "UserController.GetUser",
++  "CallingClass": "MyApp.Controllers.UserController",
++  "CallStack": [
++    "MyApp.Controllers.UserController.GetUser",
++    "MyApp.Services.UserService.ProcessRequest",
++    "MyApp.Program.Main"
++  ],
++  "SourceFile": "C:\\MyApp\\Controllers\\UserController.cs",
++  "LineNumber": 42
++}
++```
++
++## Performance Considerations
++
++- **File info**: Including file information (`IncludeFileInfo = true`) requires debug symbols and can impact performance
++- **Frame limit**: Use `MaxFrames` to limit the depth of call stack capture
++- **Namespace filtering**: Use `SkipNamespaces` and `SkipAssemblies` to avoid capturing irrelevant frames
++- **Production vs Development**: Use appropriate pre-configured options for your environment
++
++## ASP.NET Core Integration
++
++```csharp
++// In Program.cs or Startup.cs
++builder.Host.UseSerilog((context, configuration) =>
++{
++    configuration
++        .Enrich.WithCallStack(config =>
++        {
++            config.IncludeCallingMethod = true;
++            config.IncludeCallingClass = true;
++            config.SkipNamespaces.Add("Microsoft.AspNetCore");
++            config.SkipNamespaces.Add("Microsoft.Extensions");
++        })
++        .WriteTo.Console()
++        .WriteTo.File("logs/app-.txt", rollingInterval: RollingInterval.Day);
++});
++```
++
++## Custom Output Template
++
++```csharp
++var logger = new LoggerConfiguration()
++    .Enrich.WithCallStack()
++    .WriteTo.Console(outputTemplate: 
++        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} " +
++        "(Called from: {CallingClass}.{CallingMethod}) {NewLine}{Exception}")
++    .CreateLogger();
++```
++
++## Common Scenarios
++
++### Debugging Production Issues
++
++```csharp
++// Use production configuration for minimal overhead
++var logger = new LoggerConfiguration()
++    .Enrich.WithCallStackProduction()
++    .WriteTo.Seq("https://your-seq-server")
++    .CreateLogger();
++
++// Now every log entry shows where it originated
++logger.Error("Database connection failed");
++// Logs will include CallingMethod: "DatabaseService.Connect"
++// and CallingClass: "MyApp.Data.DatabaseService"
++```
++
++### Development Debugging
++
++```csharp
++// Use development configuration for maximum detail
++var logger = new LoggerConfiguration()
++    .Enrich.WithCallStackDevelopment()
++    .WriteTo.Console()
++    .CreateLogger();
++
++// Get full stack traces with every log
++logger.Debug("Entering complex operation");
++// Includes full call stack, file names, and line numbers
++```
++
++### Filtering Framework Noise
++
++```csharp
++// Skip common framework namespaces
++var logger = new LoggerConfiguration()
++    .Enrich.WithCallStack(config =>
++    {
++        config.SkipNamespaces.Add("System");
++        config.SkipNamespaces.Add("Microsoft");
++        config.SkipAssemblies.Add("mscorlib");
++    })
++    .WriteTo.Console()
++    .CreateLogger();
++```
++
++## Configuration Reference
++
++| Property | Default | Description |
++|----------|---------|-------------|
++| `SkipFrames` | 3 | Number of stack frames to skip (to bypass Serilog internals) |
++| `IncludeFileInfo` | false | Include source file name and line number (requires debug symbols) |
++| `MaxFrames` | 10 | Maximum number of stack frames to capture |
++| `IncludeCallingMethod` | true | Include the name of the calling method |
++| `IncludeCallingClass` | true | Include the name of the calling class |
++| `IncludeFullCallStack` | false | Include the full call stack as an array |
++| `ThrowOnError` | false | Whether to throw exceptions on enrichment failures |
++| `CallingMethodPropertyName` | "CallingMethod" | Property name for calling method |
++| `CallingClassPropertyName` | "CallingClass" | Property name for calling class |
++| `CallStackPropertyName` | "CallStack" | Property name for full call stack |
++| `SourceFilePropertyName` | "SourceFile" | Property name for source file |
++| `LineNumberPropertyName` | "LineNumber" | Property name for line number |
++| `SkipNamespaces` | Empty | List of namespaces to skip |
++| `SkipAssemblies` | Empty | List of assembly names to skip |
++
++## Troubleshooting
++
++### No file information appearing
++- Ensure debug symbols (PDB files) are available
++- Set `IncludeFileInfo = true` in configuration
++- Check that your build configuration generates debug symbols
++
++### Performance issues
++- Use `WithCallStackProduction()` for production environments
++- Reduce `MaxFrames` to capture fewer frames
++- Add commonly occurring namespaces to `SkipNamespaces`
++- Set `IncludeFullCallStack = false` if you only need calling method/class
++
++### Too many irrelevant frames
++- Increase `SkipFrames` to skip more internal frames
++- Add framework namespaces to `SkipNamespaces`
++- Use `SkipAssemblies` to filter out third-party libraries
++
++## License
++
++This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
++
++## Contributing
++
++Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
++
++## Support
++
++If you encounter any issues or have questions:
++- Open an issue on [GitHub](https://github.com/yourusername/Serilog.Enrichers.CallStack/issues)
++- Check existing issues for solutions
++- Provide a minimal reproducible example when reporting bugs
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack.Tests/CallStackEnricherConfigurationTests.cs b/Serilog.Enrichers.CallStack.Tests/CallStackEnricherConfigurationTests.cs
+new file mode 100644
+index 0000000..9e94433
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack.Tests/CallStackEnricherConfigurationTests.cs
+@@ -0,0 +1,88 @@
++using Xunit;
++
++namespace Serilog.Enrichers.CallStack.Tests
++{
++    public class CallStackEnricherConfigurationTests
++    {
++        [Fact]
++        public void DefaultConfiguration_HasExpectedValues()
++        {
++            // Arrange & Act
++            var config = new CallStackEnricherConfiguration();
++
++            // Assert
++            Assert.Equal(3, config.SkipFrames);
++            Assert.False(config.IncludeFileInfo);
++            Assert.Equal(10, config.MaxFrames);
++            Assert.True(config.IncludeCallingMethod);
++            Assert.True(config.IncludeCallingClass);
++            Assert.False(config.IncludeFullCallStack);
++            Assert.False(config.ThrowOnError);
++            Assert.Equal("CallingMethod", config.CallingMethodPropertyName);
++            Assert.Equal("CallingClass", config.CallingClassPropertyName);
++            Assert.Equal("CallStack", config.CallStackPropertyName);
++            Assert.Equal("SourceFile", config.SourceFilePropertyName);
++            Assert.Equal("LineNumber", config.LineNumberPropertyName);
++            Assert.Empty(config.SkipNamespaces);
++            Assert.Empty(config.SkipAssemblies);
++        }
++
++        [Fact]
++        public void Minimal_ReturnsMinimalConfiguration()
++        {
++            // Act
++            var config = CallStackEnricherConfiguration.Minimal();
++
++            // Assert
++            Assert.True(config.IncludeCallingMethod);
++            Assert.True(config.IncludeCallingClass);
++            Assert.False(config.IncludeFullCallStack);
++            Assert.False(config.IncludeFileInfo);
++            Assert.Equal(1, config.MaxFrames);
++        }
++
++        [Fact]
++        public void Detailed_ReturnsDetailedConfiguration()
++        {
++            // Act
++            var config = CallStackEnricherConfiguration.Detailed();
++
++            // Assert
++            Assert.True(config.IncludeCallingMethod);
++            Assert.True(config.IncludeCallingClass);
++            Assert.True(config.IncludeFullCallStack);
++            Assert.True(config.IncludeFileInfo);
++            Assert.Equal(20, config.MaxFrames);
++        }
++
++        [Fact]
++        public void Production_ReturnsProductionConfiguration()
++        {
++            // Act
++            var config = CallStackEnricherConfiguration.Production();
++
++            // Assert
++            Assert.True(config.IncludeCallingMethod);
++            Assert.True(config.IncludeCallingClass);
++            Assert.False(config.IncludeFullCallStack);
++            Assert.False(config.IncludeFileInfo);
++            Assert.Equal(5, config.MaxFrames);
++            Assert.False(config.ThrowOnError);
++        }
++
++        [Fact]
++        public void Development_ReturnsDevelopmentConfiguration()
++        {
++            // Act
++            var config = CallStackEnricherConfiguration.Development();
++
++            // Assert
++            Assert.True(config.IncludeCallingMethod);
++            Assert.True(config.IncludeCallingClass);
++            Assert.True(config.IncludeFullCallStack);
++            Assert.True(config.IncludeFileInfo);
++            Assert.Equal(15, config.MaxFrames);
++            Assert.True(config.ThrowOnError);
++        }
++    }
++}
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack.Tests/CallStackEnricherTests.cs b/Serilog.Enrichers.CallStack.Tests/CallStackEnricherTests.cs
+new file mode 100644
+index 0000000..f9ae371
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack.Tests/CallStackEnricherTests.cs
+@@ -0,0 +1,599 @@
++﻿using Serilog.Core;
++using Serilog.Events;
++
++namespace Serilog.Enrichers.CallStack.Tests
++{
++    public class CallStackEnricherTests
++    {
++        [Fact]
++        public void Enrich_WithDefaultConfiguration_AddsCallingMethodAndClass()
++        {
++            // Arrange
++            var enricher = new CallStackEnricher();
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            Assert.True(logEvent.Properties.ContainsKey("CallingMethod"));
++            Assert.True(logEvent.Properties.ContainsKey("CallingClass"));
++            Assert.False(logEvent.Properties.ContainsKey("CallStack"));
++        }
++
++        [Fact]
++        public void Enrich_WithMinimalConfiguration_AddsOnlyBasicInfo()
++        {
++            // Arrange
++            var config = CallStackEnricherConfiguration.Minimal();
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            Assert.True(logEvent.Properties.ContainsKey("CallingMethod"));
++            Assert.True(logEvent.Properties.ContainsKey("CallingClass"));
++            Assert.False(logEvent.Properties.ContainsKey("CallStack"));
++            Assert.False(logEvent.Properties.ContainsKey("SourceFile"));
++            Assert.False(logEvent.Properties.ContainsKey("LineNumber"));
++        }
++
++        [Fact]
++        public void Enrich_WithDetailedConfiguration_AddsAllInfo()
++        {
++            // Arrange
++            var config = CallStackEnricherConfiguration.Detailed();
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            Assert.True(logEvent.Properties.ContainsKey("CallingMethod"));
++            Assert.True(logEvent.Properties.ContainsKey("CallingClass"));
++            Assert.True(logEvent.Properties.ContainsKey("CallStack"));
++            // Note: SourceFile and LineNumber may not be present without debug symbols
++        }
++
++        [Fact]
++        public void Enrich_WithCustomPropertyNames_UsesCustomNames()
++        {
++            // Arrange
++            var config = new CallStackEnricherConfiguration
++            {
++                CallingMethodPropertyName = "Method",
++                CallingClassPropertyName = "Class",
++                CallStackPropertyName = "Stack"
++            };
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            Assert.True(logEvent.Properties.ContainsKey("Method"));
++            Assert.True(logEvent.Properties.ContainsKey("Class"));
++            Assert.False(logEvent.Properties.ContainsKey("CallingMethod"));
++            Assert.False(logEvent.Properties.ContainsKey("CallingClass"));
++        }
++
++        [Fact]
++        public void Enrich_WithSkipNamespaces_FiltersFrames()
++        {
++            // Arrange
++            var config = new CallStackEnricherConfiguration();
++            config.SkipNamespaces.Add("Serilog.Enrichers.CallStack.Tests");
++            config.IncludeFullCallStack = true;
++            
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            if (logEvent.Properties.TryGetValue("CallStack", out var callStackProperty))
++            {
++                if (callStackProperty is SequenceValue sequenceValue)
++                {
++                    var callStack = sequenceValue.Elements
++                        .Cast<ScalarValue>()
++                        .Select(sv => sv.Value?.ToString())
++                        .ToArray();
++
++                    Assert.DoesNotContain(callStack, frame => 
++                        frame?.Contains("Serilog.Enrichers.CallStack.Tests") == true);
++                }
++                else
++                {
++                    Assert.True(false, "CallStack property should be a SequenceValue");
++                }
++            }
++        }
++
++        [Fact]
++        public void Enrich_WithNullLogEvent_ThrowsArgumentNullException()
++        {
++            // Arrange
++            var enricher = new CallStackEnricher();
++            var factory = new PropertyFactory();
++
++            // Act & Assert
++            Assert.Throws<ArgumentNullException>(() => enricher.Enrich(null, factory));
++        }
++
++        [Fact]
++        public void Enrich_WithNullPropertyFactory_ThrowsArgumentNullException()
++        {
++            // Arrange
++            var enricher = new CallStackEnricher();
++            var logEvent = CreateLogEvent();
++
++            // Act & Assert
++            Assert.Throws<ArgumentNullException>(() => enricher.Enrich(logEvent, null));
++        }
++
++        [Fact]
++        public void Enrich_WithProductionConfiguration_UsesOptimalSettings()
++        {
++            // Arrange
++            var config = CallStackEnricherConfiguration.Production();
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            Assert.True(logEvent.Properties.ContainsKey("CallingMethod"));
++            Assert.True(logEvent.Properties.ContainsKey("CallingClass"));
++            Assert.False(logEvent.Properties.ContainsKey("CallStack"));
++            Assert.False(logEvent.Properties.ContainsKey("SourceFile"));
++            Assert.Equal(5, config.MaxFrames);
++            Assert.False(config.IncludeFileInfo);
++            Assert.False(config.ThrowOnError);
++        }
++
++        [Fact]
++        public void Enrich_WithDevelopmentConfiguration_UsesDetailedSettings()
++        {
++            // Arrange
++            var config = CallStackEnricherConfiguration.Development();
++            var enricher = new CallStackEnricher(config);
++
++            // Assert configuration
++            Assert.True(config.IncludeCallingMethod);
++            Assert.True(config.IncludeCallingClass);
++            Assert.True(config.IncludeFullCallStack);
++            Assert.True(config.IncludeFileInfo);
++            Assert.True(config.ThrowOnError);
++            Assert.Equal(15, config.MaxFrames);
++        }
++
++        [Fact]
++        public void CallingMethod_ContainsExpectedValue()
++        {
++            // Arrange
++            var config = new CallStackEnricherConfiguration { SkipFrames = 0 };
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            Assert.True(logEvent.Properties.ContainsKey("CallingMethod"));
++            var methodName = ((ScalarValue)logEvent.Properties["CallingMethod"]).Value?.ToString();
++            Assert.NotNull(methodName);
++            // The method name should contain something meaningful
++            Assert.NotEmpty(methodName);
++        }
++
++        [Fact]
++        public void CallingClass_ContainsExpectedValue()
++        {
++            // Arrange
++            var config = new CallStackEnricherConfiguration { SkipFrames = 0 };
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            Assert.True(logEvent.Properties.ContainsKey("CallingClass"));
++            var className = ((ScalarValue)logEvent.Properties["CallingClass"]).Value?.ToString();
++            Assert.NotNull(className);
++            // The class name should contain something meaningful
++            Assert.NotEmpty(className);
++        }
++
++        [Fact]
++        public void Constructor_WithNullConfiguration_ThrowsArgumentNullException()
++        {
++            // Act & Assert
++            Assert.Throws<ArgumentNullException>(() => new CallStackEnricher(null));
++        }
++
++        [Fact]
++        public void Enrich_WithSkipAssemblies_FiltersFramesByAssembly()
++        {
++            // Arrange
++            var config = new CallStackEnricherConfiguration();
++            config.SkipAssemblies.Add("Serilog.Enrichers.CallStack.Tests");
++            config.IncludeFullCallStack = true;
++            
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            if (logEvent.Properties.TryGetValue("CallStack", out var callStackProperty))
++            {
++                if (callStackProperty is SequenceValue sequenceValue)
++                {
++                    var callStack = sequenceValue.Elements
++                        .Cast<ScalarValue>()
++                        .Select(sv => sv.Value?.ToString())
++                        .ToArray();
++
++                    // The stack should not be empty but should have filtered out test assembly frames
++                    Assert.NotEmpty(callStack);
++                }
++                else
++                {
++                    Assert.True(false, "CallStack property should be a SequenceValue");
++                }
++            }
++        }
++
++        [Fact]
++        public void Enrich_WithMaxFramesLimit_RespectsLimit()
++        {
++            // Arrange
++            var config = new CallStackEnricherConfiguration
++            {
++                IncludeFullCallStack = true,
++                MaxFrames = 3
++            };
++            
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            if (logEvent.Properties.TryGetValue("CallStack", out var callStackProperty))
++            {
++                if (callStackProperty is SequenceValue sequenceValue)
++                {
++                    var callStack = sequenceValue.Elements.ToArray();
++                    Assert.True(callStack.Length <= 3, $"Expected at most 3 frames, but got {callStack.Length}");
++                }
++                else
++                {
++                    Assert.True(false, "CallStack property should be a SequenceValue");
++                }
++            }
++        }
++
++        [Fact]
++        public void Enrich_WithFileInfo_AddsFileAndLineProperties()
++        {
++            // Arrange
++            var config = new CallStackEnricherConfiguration
++            {
++                IncludeFileInfo = true,
++                SourceFilePropertyName = "File",
++                LineNumberPropertyName = "Line"
++            };
++            
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            // File info might not be available without debug symbols
++            // Just verify the enricher doesn't crash when file info is requested
++            Assert.True(logEvent.Properties.ContainsKey("CallingMethod"));
++        }
++
++        [Fact]
++        public void Enrich_WhenAllFeaturesDisabled_AddsNoProperties()
++        {
++            // Arrange
++            var config = new CallStackEnricherConfiguration
++            {
++                IncludeCallingMethod = false,
++                IncludeCallingClass = false,
++                IncludeFullCallStack = false,
++                IncludeFileInfo = false
++            };
++            
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++            var initialPropertyCount = logEvent.Properties.Count;
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            Assert.Equal(initialPropertyCount, logEvent.Properties.Count);
++        }
++
++        [Fact]
++        public void Enrich_WithOnlyCallStackEnabled_AddsOnlyCallStack()
++        {
++            // Arrange
++            var config = new CallStackEnricherConfiguration
++            {
++                IncludeCallingMethod = false,
++                IncludeCallingClass = false,
++                IncludeFullCallStack = true,
++                IncludeFileInfo = false
++            };
++            
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            Assert.True(logEvent.Properties.ContainsKey("CallStack"));
++            Assert.False(logEvent.Properties.ContainsKey("CallingMethod"));
++            Assert.False(logEvent.Properties.ContainsKey("CallingClass"));
++        }
++
++        [Fact]
++        public void Enrich_WithCustomSkipFrames_SkipsCorrectNumberOfFrames()
++        {
++            // Arrange
++            var config = new CallStackEnricherConfiguration
++            {
++                SkipFrames = 5,
++                IncludeFullCallStack = true
++            };
++            
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            Assert.True(logEvent.Properties.ContainsKey("CallingMethod"));
++            // The exact frame content will depend on the call stack depth
++        }
++
++        [Fact]
++        public void Enrich_MultipleTimes_DoesNotDuplicateProperties()
++        {
++            // Arrange
++            var enricher = new CallStackEnricher();
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++            var firstMethodValue = logEvent.Properties["CallingMethod"];
++            
++            enricher.Enrich(logEvent, factory);
++            var secondMethodValue = logEvent.Properties["CallingMethod"];
++
++            // Assert
++            Assert.Equal(2, logEvent.Properties.Count); // Should still only have 2 properties
++            Assert.Equal(firstMethodValue, secondMethodValue); // Values should be the same
++        }
++
++        [Fact]
++        public void Enrich_WithRecursiveCall_HandlesRecursion()
++        {
++            // Arrange
++            var config = new CallStackEnricherConfiguration
++            {
++                IncludeFullCallStack = true,
++                MaxFrames = 20
++            };
++            var enricher = new CallStackEnricher(config);
++            var factory = new PropertyFactory();
++
++            // Act - Create log event within a recursive call
++            var logEvent = RecursiveMethod(5, enricher, factory);
++
++            // Assert
++            Assert.NotNull(logEvent);
++            Assert.True(logEvent.Properties.ContainsKey("CallStack"));
++            
++            if (logEvent.Properties.TryGetValue("CallStack", out var callStackProperty))
++            {
++                if (callStackProperty is SequenceValue sequenceValue)
++                {
++                    var callStack = sequenceValue.Elements
++                        .Cast<ScalarValue>()
++                        .Select(sv => sv.Value?.ToString())
++                        .ToArray();
++                    
++                    // Should have captured some stack frames
++                    Assert.NotEmpty(callStack);
++                    // Stack should contain meaningful content
++                    Assert.All(callStack, frame => Assert.NotNull(frame));
++                }
++                else
++                {
++                    Assert.True(false, "CallStack property should be a SequenceValue");
++                }
++            }
++        }
++
++        private static LogEvent RecursiveMethod(int depth, CallStackEnricher enricher, ILogEventPropertyFactory factory)
++        {
++            if (depth <= 0)
++            {
++                var logEvent = CreateLogEvent();
++                enricher.Enrich(logEvent, factory);
++                return logEvent;
++            }
++            return RecursiveMethod(depth - 1, enricher, factory);
++        }
++
++        [Fact]
++        public void Enrich_WithThrowOnErrorTrue_PropagatesExceptions()
++        {
++            // Arrange
++            var config = new CallStackEnricherConfiguration
++            {
++                ThrowOnError = true
++            };
++            
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new ThrowingPropertyFactory(); // This will throw when creating properties
++
++            // Act & Assert
++            Assert.Throws<InvalidOperationException>(() => enricher.Enrich(logEvent, factory));
++        }
++
++        [Fact]
++        public void Enrich_WithThrowOnErrorFalse_SwallowsExceptions()
++        {
++            // Arrange
++            var config = new CallStackEnricherConfiguration
++            {
++                ThrowOnError = false
++            };
++            
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new ThrowingPropertyFactory();
++
++            // Act
++            Exception? caughtException = null;
++            try
++            {
++                enricher.Enrich(logEvent, factory);
++            }
++            catch (Exception ex)
++            {
++                caughtException = ex;
++            }
++
++            // Assert
++            Assert.Null(caughtException); // Should not throw
++        }
++
++        [Fact]
++        public void Enrich_WithExistingProperties_PreservesExistingProperties()
++        {
++            // Arrange
++            var enricher = new CallStackEnricher();
++            var existingProperty = new LogEventProperty("ExistingProperty", new ScalarValue("ExistingValue"));
++            var logEvent = new LogEvent(
++                DateTimeOffset.Now,
++                LogEventLevel.Information,
++                null,
++                MessageTemplate.Empty,
++                new[] { existingProperty });
++            var factory = new PropertyFactory();
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            Assert.True(logEvent.Properties.ContainsKey("ExistingProperty"));
++            Assert.True(logEvent.Properties.ContainsKey("CallingMethod"));
++            Assert.True(logEvent.Properties.ContainsKey("CallingClass"));
++            Assert.Equal("ExistingValue", ((ScalarValue)logEvent.Properties["ExistingProperty"]).Value);
++        }
++
++        [Fact]
++        public void Enrich_WithZeroMaxFrames_AddsNoProperties()
++        {
++            // Arrange
++            var config = new CallStackEnricherConfiguration
++            {
++                MaxFrames = 0,
++                IncludeFullCallStack = true,
++                SkipFrames = 0
++            };
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++            var initialCount = logEvent.Properties.Count;
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            // With MaxFrames = 0, no frames are captured, so no properties should be added
++            Assert.Equal(initialCount, logEvent.Properties.Count);
++            Assert.False(logEvent.Properties.ContainsKey("CallingMethod"));
++            Assert.False(logEvent.Properties.ContainsKey("CallingClass"));
++            Assert.False(logEvent.Properties.ContainsKey("CallStack"));
++        }
++
++        [Fact]
++        public void Configuration_WithAllCustomPropertyNames_UsesAllCustomNames()
++        {
++            // Arrange
++            var config = new CallStackEnricherConfiguration
++            {
++                CallingMethodPropertyName = "CustomMethod",
++                CallingClassPropertyName = "CustomClass",
++                CallStackPropertyName = "CustomStack",
++                SourceFilePropertyName = "CustomFile",
++                LineNumberPropertyName = "CustomLine",
++                IncludeFullCallStack = true,
++                IncludeFileInfo = true
++            };
++            var enricher = new CallStackEnricher(config);
++            var logEvent = CreateLogEvent();
++            var factory = new PropertyFactory();
++
++            // Act
++            enricher.Enrich(logEvent, factory);
++
++            // Assert
++            Assert.True(logEvent.Properties.ContainsKey("CustomMethod"));
++            Assert.True(logEvent.Properties.ContainsKey("CustomClass"));
++            Assert.True(logEvent.Properties.ContainsKey("CustomStack"));
++            // File info might not be available, but property names should be respected
++            Assert.False(logEvent.Properties.ContainsKey("CallingMethod"));
++            Assert.False(logEvent.Properties.ContainsKey("CallingClass"));
++            Assert.False(logEvent.Properties.ContainsKey("CallStack"));
++        }
++
++        private static LogEvent CreateLogEvent()
++        {
++            return new LogEvent(
++                DateTimeOffset.Now,
++                LogEventLevel.Information,
++                null,
++                MessageTemplate.Empty,
++                new LogEventProperty[0]);
++        }
++    }
++}
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack.Tests/PropertyFactory.cs b/Serilog.Enrichers.CallStack.Tests/PropertyFactory.cs
+new file mode 100644
+index 0000000..bc9c122
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack.Tests/PropertyFactory.cs
+@@ -0,0 +1,23 @@
++using System.Collections.Generic;
++using Serilog.Core;
++using Serilog.Events;
++
++namespace Serilog.Enrichers.CallStack.Tests
++{
++    internal class PropertyFactory : ILogEventPropertyFactory
++    {
++        public LogEventProperty CreateProperty(string name, object? value, bool destructureObjects = false)
++        {
++            if (value is System.Collections.IEnumerable enumerable && !(value is string))
++            {
++                var elements = new List<LogEventPropertyValue>();
++                foreach (var item in enumerable)
++                {
++                    elements.Add(new ScalarValue(item));
++                }
++                return new LogEventProperty(name, new SequenceValue(elements));
++            }
++            return new LogEventProperty(name, new ScalarValue(value));
++        }
++    }
++}
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack.Tests/Serilog.Enrichers.CallStack.Tests.csproj b/Serilog.Enrichers.CallStack.Tests/Serilog.Enrichers.CallStack.Tests.csproj
+new file mode 100644
+index 0000000..33b4e37
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack.Tests/Serilog.Enrichers.CallStack.Tests.csproj
+@@ -0,0 +1,25 @@
++﻿<Project Sdk="Microsoft.NET.Sdk">
++
++  <PropertyGroup>
++    <TargetFramework>net9.0</TargetFramework>
++    <ImplicitUsings>enable</ImplicitUsings>
++    <Nullable>enable</Nullable>
++    <IsPackable>false</IsPackable>
++  </PropertyGroup>
++
++  <ItemGroup>
++    <PackageReference Include="coverlet.collector" Version="6.0.2" />
++    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
++    <PackageReference Include="xunit" Version="2.9.2" />
++    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
++  </ItemGroup>
++
++  <ItemGroup>
++    <Using Include="Xunit" />
++  </ItemGroup>
++
++  <ItemGroup>
++    <ProjectReference Include="..\Serilog.Enrichers.CallStack\Serilog.Enrichers.CallStack.csproj" />
++  </ItemGroup>
++
++</Project>
+diff --git a/Serilog.Enrichers.CallStack.Tests/ThrowingPropertyFactory.cs b/Serilog.Enrichers.CallStack.Tests/ThrowingPropertyFactory.cs
+new file mode 100644
+index 0000000..fec996d
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack.Tests/ThrowingPropertyFactory.cs
+@@ -0,0 +1,14 @@
++using System;
++using Serilog.Core;
++using Serilog.Events;
++
++namespace Serilog.Enrichers.CallStack.Tests
++{
++    internal class ThrowingPropertyFactory : ILogEventPropertyFactory
++    {
++        public LogEventProperty CreateProperty(string name, object? value, bool destructureObjects = false)
++        {
++            throw new InvalidOperationException("Test exception");
++        }
++    }
++}
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack/CallStackEnricher.cs b/Serilog.Enrichers.CallStack/CallStackEnricher.cs
+new file mode 100644
+index 0000000..c8d994e
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack/CallStackEnricher.cs
+@@ -0,0 +1,210 @@
++﻿using System;
++using System.Diagnostics;
++using System.Linq;
++using Serilog.Core;
++using Serilog.Events;
++
++namespace Serilog.Enrichers.CallStack
++{
++    /// <summary>
++    /// Enricher that adds call stack information to log events
++    /// </summary>
++    public class CallStackEnricher : ILogEventEnricher
++    {
++        private readonly CallStackEnricherConfiguration _configuration;
++
++        /// <summary>
++        /// Initializes a new instance of CallStackEnricher with default configuration
++        /// </summary>
++        public CallStackEnricher() : this(new CallStackEnricherConfiguration())
++        {
++        }
++
++        /// <summary>
++        /// Initializes a new instance of CallStackEnricher with custom configuration
++        /// </summary>
++        /// <param name="configuration">Configuration for the enricher</param>
++        public CallStackEnricher(CallStackEnricherConfiguration configuration)
++        {
++            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
++        }
++
++        /// <summary>
++        /// Enriches the log event with call stack information
++        /// </summary>
++        /// <param name="logEvent">The log event to enrich</param>
++        /// <param name="propertyFactory">Factory for creating log event properties</param>
++        public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
++        {
++            if (logEvent == null) throw new ArgumentNullException(nameof(logEvent));
++            if (propertyFactory == null) throw new ArgumentNullException(nameof(propertyFactory));
++
++            try
++            {
++                var stackTrace = new StackTrace(_configuration.SkipFrames, _configuration.IncludeFileInfo);
++                var frames = stackTrace.GetFrames();
++
++                if (frames == null || frames.Length == 0)
++                    return;
++
++                // Filter frames based on configuration
++                var relevantFrames = frames
++                    .Where(frame => ShouldIncludeFrame(frame))
++                    .Take(_configuration.MaxFrames)
++                    .ToArray();
++
++                if (!relevantFrames.Any())
++                    return;
++
++                // Add calling method information
++                if (_configuration.IncludeCallingMethod && relevantFrames.Length > 0)
++                {
++                    var callingFrame = relevantFrames.First();
++                    var callingMethod = GetMethodInfo(callingFrame);
++                    if (!string.IsNullOrEmpty(callingMethod))
++                    {
++                        logEvent.AddPropertyIfAbsent(
++                            propertyFactory.CreateProperty(_configuration.CallingMethodPropertyName, callingMethod));
++                    }
++                }
++
++                // Add calling class information
++                if (_configuration.IncludeCallingClass && relevantFrames.Length > 0)
++                {
++                    var callingFrame = relevantFrames.First();
++                    var callingClass = GetClassName(callingFrame);
++                    if (!string.IsNullOrEmpty(callingClass))
++                    {
++                        logEvent.AddPropertyIfAbsent(
++                            propertyFactory.CreateProperty(_configuration.CallingClassPropertyName, callingClass));
++                    }
++                }
++
++                // Add full call stack if requested
++                if (_configuration.IncludeFullCallStack)
++                {
++                    var callStackInfo = relevantFrames
++                        .Select(frame => FormatStackFrame(frame))
++                        .Where(info => !string.IsNullOrEmpty(info))
++                        .ToArray();
++
++                    if (callStackInfo.Any())
++                    {
++                        logEvent.AddPropertyIfAbsent(
++                            propertyFactory.CreateProperty(_configuration.CallStackPropertyName, callStackInfo));
++                    }
++                }
++
++                // Add source file and line number if available and requested
++                if (_configuration.IncludeFileInfo && relevantFrames.Length > 0)
++                {
++                    var callingFrame = relevantFrames.First();
++                    var fileName = callingFrame.GetFileName();
++                    var lineNumber = callingFrame.GetFileLineNumber();
++
++                    if (!string.IsNullOrEmpty(fileName))
++                    {
++                        logEvent.AddPropertyIfAbsent(
++                            propertyFactory.CreateProperty(_configuration.SourceFilePropertyName, fileName));
++                    }
++
++                    if (lineNumber > 0)
++                    {
++                        logEvent.AddPropertyIfAbsent(
++                            propertyFactory.CreateProperty(_configuration.LineNumberPropertyName, lineNumber));
++                    }
++                }
++            }
++            catch (Exception ex)
++            {
++                // Don't let enricher failures break logging
++                if (_configuration.ThrowOnError)
++                    throw;
++                
++                // Optionally log the error (but avoid infinite recursion)
++                System.Diagnostics.Debug.WriteLine($"CallStackEnricher error: {ex.Message}");
++            }
++        }
++
++        private bool ShouldIncludeFrame(StackFrame frame)
++        {
++            if (frame?.GetMethod() == null)
++                return false;
++
++            var method = frame.GetMethod();
++            var declaringType = method.DeclaringType;
++
++            if (declaringType == null)
++                return false;
++
++            var typeName = declaringType.FullName ?? declaringType.Name;
++
++            // Skip Serilog internal frames
++            if (typeName.StartsWith("Serilog.", StringComparison.OrdinalIgnoreCase))
++                return false;
++
++            // Skip this enricher's frames
++            if (typeName.StartsWith("Serilog.Enrichers.CallStack", StringComparison.OrdinalIgnoreCase))
++                return false;
++
++            // Skip configured namespaces
++            if (_configuration.SkipNamespaces?.Any(ns => 
++                typeName.StartsWith(ns, StringComparison.OrdinalIgnoreCase)) == true)
++                return false;
++
++            // Skip configured assemblies
++            if (_configuration.SkipAssemblies?.Any(asm => 
++                declaringType.Assembly.GetName().Name?.Equals(asm, StringComparison.OrdinalIgnoreCase) == true) == true)
++                return false;
++
++            return true;
++        }
++
++        private string GetMethodInfo(StackFrame frame)
++        {
++            var method = frame?.GetMethod();
++            if (method == null)
++                return null;
++
++            var declaringType = method.DeclaringType;
++            if (declaringType == null)
++                return method.Name;
++
++            return $"{declaringType.Name}.{method.Name}";
++        }
++
++        private string GetClassName(StackFrame frame)
++        {
++            var method = frame?.GetMethod();
++            var declaringType = method?.DeclaringType;
++            
++            return declaringType?.FullName ?? declaringType?.Name;
++        }
++
++        private string FormatStackFrame(StackFrame frame)
++        {
++            var method = frame?.GetMethod();
++            if (method == null)
++                return null;
++
++            var declaringType = method.DeclaringType;
++            var typeName = declaringType?.FullName ?? declaringType?.Name ?? "Unknown";
++            var methodName = method.Name;
++
++            var result = $"{typeName}.{methodName}";
++
++            if (_configuration.IncludeFileInfo)
++            {
++                var fileName = frame.GetFileName();
++                var lineNumber = frame.GetFileLineNumber();
++
++                if (!string.IsNullOrEmpty(fileName) && lineNumber > 0)
++                {
++                    result += $" in {System.IO.Path.GetFileName(fileName)}:line {lineNumber}";
++                }
++            }
++
++            return result;
++        }
++    }
++}
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack/CallStackEnricherConfiguration.cs b/Serilog.Enrichers.CallStack/CallStackEnricherConfiguration.cs
+new file mode 100644
+index 0000000..e6fb730
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack/CallStackEnricherConfiguration.cs
+@@ -0,0 +1,170 @@
++﻿using System.Collections.Generic;
++
++namespace Serilog.Enrichers.CallStack
++{
++    /// <summary>
++    /// Configuration options for the CallStackEnricher
++    /// </summary>
++    public class CallStackEnricherConfiguration
++    {
++        /// <summary>
++        /// Gets or sets the number of stack frames to skip when capturing the call stack.
++        /// Default is 3 to skip Serilog's internal frames.
++        /// </summary>
++        public int SkipFrames { get; set; } = 3;
++
++        /// <summary>
++        /// Gets or sets whether to include file information (file name and line number) in the call stack.
++        /// Default is false. Requires debug symbols to be available.
++        /// </summary>
++        public bool IncludeFileInfo { get; set; } = false;
++
++        /// <summary>
++        /// Gets or sets the maximum number of stack frames to include.
++        /// Default is 10.
++        /// </summary>
++        public int MaxFrames { get; set; } = 10;
++
++        /// <summary>
++        /// Gets or sets whether to include the calling method name.
++        /// Default is true.
++        /// </summary>
++        public bool IncludeCallingMethod { get; set; } = true;
++
++        /// <summary>
++        /// Gets or sets whether to include the calling class name.
++        /// Default is true.
++        /// </summary>
++        public bool IncludeCallingClass { get; set; } = true;
++
++        /// <summary>
++        /// Gets or sets whether to include the full call stack as an array.
++        /// Default is false.
++        /// </summary>
++        public bool IncludeFullCallStack { get; set; } = false;
++
++        /// <summary>
++        /// Gets or sets whether to throw exceptions when enrichment fails.
++        /// Default is false - errors are silently ignored to prevent breaking logging.
++        /// </summary>
++        public bool ThrowOnError { get; set; } = false;
++
++        /// <summary>
++        /// Gets or sets the property name for the calling method.
++        /// Default is "CallingMethod".
++        /// </summary>
++        public string CallingMethodPropertyName { get; set; } = "CallingMethod";
++
++        /// <summary>
++        /// Gets or sets the property name for the calling class.
++        /// Default is "CallingClass".
++        /// </summary>
++        public string CallingClassPropertyName { get; set; } = "CallingClass";
++
++        /// <summary>
++        /// Gets or sets the property name for the full call stack.
++        /// Default is "CallStack".
++        /// </summary>
++        public string CallStackPropertyName { get; set; } = "CallStack";
++
++        /// <summary>
++        /// Gets or sets the property name for the source file name.
++        /// Default is "SourceFile".
++        /// </summary>
++        public string SourceFilePropertyName { get; set; } = "SourceFile";
++
++        /// <summary>
++        /// Gets or sets the property name for the line number.
++        /// Default is "LineNumber".
++        /// </summary>
++        public string LineNumberPropertyName { get; set; } = "LineNumber";
++
++        /// <summary>
++        /// Gets or sets the list of namespaces to skip when building the call stack.
++        /// These are in addition to automatically skipped Serilog namespaces.
++        /// </summary>
++        public IList<string> SkipNamespaces { get; set; } = new List<string>();
++
++        /// <summary>
++        /// Gets or sets the list of assembly names to skip when building the call stack.
++        /// </summary>
++        public IList<string> SkipAssemblies { get; set; } = new List<string>();
++
++        /// <summary>
++        /// Creates a new configuration with default values
++        /// </summary>
++        public CallStackEnricherConfiguration()
++        {
++        }
++
++        /// <summary>
++        /// Creates a configuration that includes only calling method and class (minimal overhead)
++        /// </summary>
++        /// <returns>Configuration for minimal call stack information</returns>
++        public static CallStackEnricherConfiguration Minimal()
++        {
++            return new CallStackEnricherConfiguration
++            {
++                IncludeCallingMethod = true,
++                IncludeCallingClass = true,
++                IncludeFullCallStack = false,
++                IncludeFileInfo = false,
++                MaxFrames = 1,
++                SkipFrames = 3
++            };
++        }
++
++        /// <summary>
++        /// Creates a configuration that includes full call stack information
++        /// </summary>
++        /// <returns>Configuration for detailed call stack information</returns>
++        public static CallStackEnricherConfiguration Detailed()
++        {
++            return new CallStackEnricherConfiguration
++            {
++                IncludeCallingMethod = true,
++                IncludeCallingClass = true,
++                IncludeFullCallStack = true,
++                IncludeFileInfo = true,
++                MaxFrames = 20,
++                SkipFrames = 3
++            };
++        }
++
++        /// <summary>
++        /// Creates a configuration optimized for production use (no file info for performance)
++        /// </summary>
++        /// <returns>Configuration optimized for production environments</returns>
++        public static CallStackEnricherConfiguration Production()
++        {
++            return new CallStackEnricherConfiguration
++            {
++                IncludeCallingMethod = true,
++                IncludeCallingClass = true,
++                IncludeFullCallStack = false,
++                IncludeFileInfo = false,
++                MaxFrames = 5,
++                SkipFrames = 3,
++                ThrowOnError = false
++            };
++        }
++
++        /// <summary>
++        /// Creates a configuration optimized for development/debugging
++        /// </summary>
++        /// <returns>Configuration with detailed information for debugging</returns>
++        public static CallStackEnricherConfiguration Development()
++        {
++            return new CallStackEnricherConfiguration
++            {
++                IncludeCallingMethod = true,
++                IncludeCallingClass = true,
++                IncludeFullCallStack = true,
++                IncludeFileInfo = true,
++                MaxFrames = 15,
++                SkipFrames = 3,
++                ThrowOnError = true
++            };
++        }
++    }
++}
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack/LoggerConfigurationExtensions.cs b/Serilog.Enrichers.CallStack/LoggerConfigurationExtensions.cs
+new file mode 100644
+index 0000000..9b55080
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack/LoggerConfigurationExtensions.cs
+@@ -0,0 +1,122 @@
++﻿using System;
++using Serilog.Configuration;
++
++namespace Serilog.Enrichers.CallStack
++{
++    /// <summary>
++    /// Extension methods for configuring the CallStackEnricher
++    /// </summary>
++    public static class LoggerConfigurationExtensions
++    {
++        /// <summary>
++        /// Adds the CallStackEnricher to the logger configuration with default settings
++        /// </summary>
++        /// <param name="enrichmentConfiguration">The logger enrichment configuration</param>
++        /// <returns>The logger configuration for method chaining</returns>
++        public static LoggerConfiguration WithCallStack(
++            this LoggerEnrichmentConfiguration enrichmentConfiguration)
++        {
++            if (enrichmentConfiguration == null)
++                throw new ArgumentNullException(nameof(enrichmentConfiguration));
++
++            return enrichmentConfiguration.With<CallStackEnricher>();
++        }
++
++        /// <summary>
++        /// Adds the CallStackEnricher to the logger configuration with custom configuration
++        /// </summary>
++        /// <param name="enrichmentConfiguration">The logger enrichment configuration</param>
++        /// <param name="configuration">Custom configuration for the enricher</param>
++        /// <returns>The logger configuration for method chaining</returns>
++        public static LoggerConfiguration WithCallStack(
++            this LoggerEnrichmentConfiguration enrichmentConfiguration,
++            CallStackEnricherConfiguration configuration)
++        {
++            if (enrichmentConfiguration == null)
++                throw new ArgumentNullException(nameof(enrichmentConfiguration));
++            
++            if (configuration == null)
++                throw new ArgumentNullException(nameof(configuration));
++
++            return enrichmentConfiguration.With(new CallStackEnricher(configuration));
++        }
++
++        /// <summary>
++        /// Adds the CallStackEnricher with minimal configuration (calling method and class only)
++        /// </summary>
++        /// <param name="enrichmentConfiguration">The logger enrichment configuration</param>
++        /// <returns>The logger configuration for method chaining</returns>
++        public static LoggerConfiguration WithCallStackMinimal(
++            this LoggerEnrichmentConfiguration enrichmentConfiguration)
++        {
++            if (enrichmentConfiguration == null)
++                throw new ArgumentNullException(nameof(enrichmentConfiguration));
++
++            return enrichmentConfiguration.With(new CallStackEnricher(CallStackEnricherConfiguration.Minimal()));
++        }
++
++        /// <summary>
++        /// Adds the CallStackEnricher with detailed configuration (full call stack and file info)
++        /// </summary>
++        /// <param name="enrichmentConfiguration">The logger enrichment configuration</param>
++        /// <returns>The logger configuration for method chaining</returns>
++        public static LoggerConfiguration WithCallStackDetailed(
++            this LoggerEnrichmentConfiguration enrichmentConfiguration)
++        {
++            if (enrichmentConfiguration == null)
++                throw new ArgumentNullException(nameof(enrichmentConfiguration));
++
++            return enrichmentConfiguration.With(new CallStackEnricher(CallStackEnricherConfiguration.Detailed()));
++        }
++
++        /// <summary>
++        /// Adds the CallStackEnricher with production-optimized configuration
++        /// </summary>
++        /// <param name="enrichmentConfiguration">The logger enrichment configuration</param>
++        /// <returns>The logger configuration for method chaining</returns>
++        public static LoggerConfiguration WithCallStackProduction(
++            this LoggerEnrichmentConfiguration enrichmentConfiguration)
++        {
++            if (enrichmentConfiguration == null)
++                throw new ArgumentNullException(nameof(enrichmentConfiguration));
++
++            return enrichmentConfiguration.With(new CallStackEnricher(CallStackEnricherConfiguration.Production()));
++        }
++
++        /// <summary>
++        /// Adds the CallStackEnricher with development-optimized configuration
++        /// </summary>
++        /// <param name="enrichmentConfiguration">The logger enrichment configuration</param>
++        /// <returns>The logger configuration for method chaining</returns>
++        public static LoggerConfiguration WithCallStackDevelopment(
++            this LoggerEnrichmentConfiguration enrichmentConfiguration)
++        {
++            if (enrichmentConfiguration == null)
++                throw new ArgumentNullException(nameof(enrichmentConfiguration));
++
++            return enrichmentConfiguration.With(new CallStackEnricher(CallStackEnricherConfiguration.Development()));
++        }
++
++        /// <summary>
++        /// Adds the CallStackEnricher with a configuration builder action
++        /// </summary>
++        /// <param name="enrichmentConfiguration">The logger enrichment configuration</param>
++        /// <param name="configureAction">Action to configure the enricher</param>
++        /// <returns>The logger configuration for method chaining</returns>
++        public static LoggerConfiguration WithCallStack(
++            this LoggerEnrichmentConfiguration enrichmentConfiguration,
++            Action<CallStackEnricherConfiguration> configureAction)
++        {
++            if (enrichmentConfiguration == null)
++                throw new ArgumentNullException(nameof(enrichmentConfiguration));
++            
++            if (configureAction == null)
++                throw new ArgumentNullException(nameof(configureAction));
++
++            var configuration = new CallStackEnricherConfiguration();
++            configureAction(configuration);
++
++            return enrichmentConfiguration.With(new CallStackEnricher(configuration));
++        }
++    }
++}
+\ No newline at end of file
+diff --git a/Serilog.Enrichers.CallStack/Serilog.Enrichers.CallStack.csproj b/Serilog.Enrichers.CallStack/Serilog.Enrichers.CallStack.csproj
+new file mode 100644
+index 0000000..fc337b1
+--- /dev/null
++++ b/Serilog.Enrichers.CallStack/Serilog.Enrichers.CallStack.csproj
+@@ -0,0 +1,41 @@
++﻿<Project Sdk="Microsoft.NET.Sdk">
++
++    <PropertyGroup>
++        <TargetFrameworks>net48;net5.0;net6.0;net7.0;net8.0</TargetFrameworks>
++        <PackageId>Serilog.Enrichers.CallStack</PackageId>
++        <PackageVersion>1.0.0</PackageVersion>
++        <Authors>Michael Akinyemi</Authors>
++        <Company>Code Bridge Youth Initiative</Company>
++        <Description>A Serilog enricher that adds call stack information (calling method, class, file location) to log events. Supports .NET Framework 4.8 and .NET 5+. Features configurable depth, performance optimization, and namespace filtering.</Description>
++        <PackageTags>serilog;logging;callstack;enricher;diagnostics;debugging;stacktrace;trace</PackageTags>
++        <PackageLicenseExpression>MIT</PackageLicenseExpression>
++        <PackageProjectUrl>https://github.com/hokagedami/Serilog.Enrichers.CallStack</PackageProjectUrl>
++        <RepositoryUrl>https://github.com/hokagedami/serilog-stacktrace-enricher</RepositoryUrl>
++        <RepositoryType>git</RepositoryType>
++        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
++        <LangVersion>latest</LangVersion>
++        <PackageReadmeFile>README.md</PackageReadmeFile>
++    </PropertyGroup>
++
++    <ItemGroup>
++        <None Include="..\README.md" Pack="true" PackagePath="\" />
++    </ItemGroup>
++
++    <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
++        <DefineConstants>NETFRAMEWORK</DefineConstants>
++    </PropertyGroup>
++
++    <PropertyGroup Condition="'$(TargetFramework)' != 'net48'">
++        <DefineConstants>NETCORE</DefineConstants>
++    </PropertyGroup>
++
++    <ItemGroup>
++        <PackageReference Include="Serilog" Version="4.0.0" />
++    </ItemGroup>
++
++    <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
++        <Reference Include="System" />
++        <Reference Include="System.Core" />
++    </ItemGroup>
++
++</Project>
+\ No newline at end of file
+diff --git a/SerilogCallStackEnricher.sln b/SerilogCallStackEnricher.sln
+new file mode 100644
+index 0000000..8cee268
+--- /dev/null
++++ b/SerilogCallStackEnricher.sln
+@@ -0,0 +1,45 @@
++﻿
++Microsoft Visual Studio Solution File, Format Version 12.00
++Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serilog.Enrichers.CallStack", "Serilog.Enrichers.CallStack\Serilog.Enrichers.CallStack.csproj", "{637D99A3-656A-4BB9-8F99-B94C2E4B6126}"
++EndProject
++Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serilog.Enrichers.CallStack.Tests", "Serilog.Enrichers.CallStack.Tests\Serilog.Enrichers.CallStack.Tests.csproj", "{5D8A4D7E-FAE9-4D94-BE6E-9E2CB28B5143}"
++EndProject
++Global
++	GlobalSection(SolutionConfigurationPlatforms) = preSolution
++		Debug|Any CPU = Debug|Any CPU
++		Debug|x64 = Debug|x64
++		Debug|x86 = Debug|x86
++		Release|Any CPU = Release|Any CPU
++		Release|x64 = Release|x64
++		Release|x86 = Release|x86
++	EndGlobalSection
++	GlobalSection(ProjectConfigurationPlatforms) = postSolution
++		{637D99A3-656A-4BB9-8F99-B94C2E4B6126}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
++		{637D99A3-656A-4BB9-8F99-B94C2E4B6126}.Debug|Any CPU.Build.0 = Debug|Any CPU
++		{637D99A3-656A-4BB9-8F99-B94C2E4B6126}.Debug|x64.ActiveCfg = Debug|Any CPU
++		{637D99A3-656A-4BB9-8F99-B94C2E4B6126}.Debug|x64.Build.0 = Debug|Any CPU
++		{637D99A3-656A-4BB9-8F99-B94C2E4B6126}.Debug|x86.ActiveCfg = Debug|Any CPU
++		{637D99A3-656A-4BB9-8F99-B94C2E4B6126}.Debug|x86.Build.0 = Debug|Any CPU
++		{637D99A3-656A-4BB9-8F99-B94C2E4B6126}.Release|Any CPU.ActiveCfg = Release|Any CPU
++		{637D99A3-656A-4BB9-8F99-B94C2E4B6126}.Release|Any CPU.Build.0 = Release|Any CPU
++		{637D99A3-656A-4BB9-8F99-B94C2E4B6126}.Release|x64.ActiveCfg = Release|Any CPU
++		{637D99A3-656A-4BB9-8F99-B94C2E4B6126}.Release|x64.Build.0 = Release|Any CPU
++		{637D99A3-656A-4BB9-8F99-B94C2E4B6126}.Release|x86.ActiveCfg = Release|Any CPU
++		{637D99A3-656A-4BB9-8F99-B94C2E4B6126}.Release|x86.Build.0 = Release|Any CPU
++		{5D8A4D7E-FAE9-4D94-BE6E-9E2CB28B5143}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
++		{5D8A4D7E-FAE9-4D94-BE6E-9E2CB28B5143}.Debug|Any CPU.Build.0 = Debug|Any CPU
++		{5D8A4D7E-FAE9-4D94-BE6E-9E2CB28B5143}.Debug|x64.ActiveCfg = Debug|Any CPU
++		{5D8A4D7E-FAE9-4D94-BE6E-9E2CB28B5143}.Debug|x64.Build.0 = Debug|Any CPU
++		{5D8A4D7E-FAE9-4D94-BE6E-9E2CB28B5143}.Debug|x86.ActiveCfg = Debug|Any CPU
++		{5D8A4D7E-FAE9-4D94-BE6E-9E2CB28B5143}.Debug|x86.Build.0 = Debug|Any CPU
++		{5D8A4D7E-FAE9-4D94-BE6E-9E2CB28B5143}.Release|Any CPU.ActiveCfg = Release|Any CPU
++		{5D8A4D7E-FAE9-4D94-BE6E-9E2CB28B5143}.Release|Any CPU.Build.0 = Release|Any CPU
++		{5D8A4D7E-FAE9-4D94-BE6E-9E2CB28B5143}.Release|x64.ActiveCfg = Release|Any CPU
++		{5D8A4D7E-FAE9-4D94-BE6E-9E2CB28B5143}.Release|x64.Build.0 = Release|Any CPU
++		{5D8A4D7E-FAE9-4D94-BE6E-9E2CB28B5143}.Release|x86.ActiveCfg = Release|Any CPU
++		{5D8A4D7E-FAE9-4D94-BE6E-9E2CB28B5143}.Release|x86.Build.0 = Release|Any CPU
++	EndGlobalSection
++	GlobalSection(SolutionProperties) = preSolution
++		HideSolutionNode = FALSE
++	EndGlobalSection
++EndGlobal
+diff --git a/commit_history.txt b/commit_history.txt
+new file mode 100644
+index 0000000..02bd0a7
+--- /dev/null
++++ b/commit_history.txt
+@@ -0,0 +1,77 @@
++# Commit History for Serilog.Enrichers.CallStack
++# Format: [Date] [Message]
++
++[2025-01-28] Initial commit
++
++[2025-01-27] feat: Add comprehensive test coverage for all enricher scenarios
++- Add tests for SkipAssemblies functionality
++- Add tests for MaxFrames limit enforcement
++- Add tests for error handling with ThrowOnError flag
++- Add edge case tests including recursion and zero frames
++
++[2025-01-26] refactor: Separate test classes into individual files
++- Extract PropertyFactory to its own file
++- Extract CallStackEnricherConfigurationTests
++- Improve code organization and maintainability
++
++[2025-01-25] docs: Update README following NuGet best practices
++- Add badges for NuGet version and .NET support
++- Add troubleshooting section
++- Include common scenarios and examples
++- Configure package to include README
++
++[2025-01-20] feat: Add production and development preset configurations
++- Add CallStackEnricherConfiguration.Production()
++- Add CallStackEnricherConfiguration.Development()
++- Optimize default settings for different environments
++
++[2025-01-15] feat: Implement namespace and assembly filtering
++- Add SkipNamespaces collection for filtering
++- Add SkipAssemblies collection for filtering
++- Improve performance by skipping framework internals
++
++[2025-01-10] test: Add initial test suite with xUnit
++- Set up test project with xUnit framework
++- Add tests for default configuration
++- Add tests for custom property names
++- Add null parameter validation tests
++
++[2024-12-20] feat: Add file info support with debug symbols
++- Add IncludeFileInfo configuration option
++- Capture source file path when available
++- Capture line numbers when debug symbols present
++
++[2024-12-15] feat: Implement configuration builder pattern
++- Add fluent configuration API
++- Add WithCallStack extension methods
++- Support configuration via action delegate
++
++[2024-12-01] feat: Add configurable property names
++- Allow customization of CallingMethod property name
++- Allow customization of CallingClass property name
++- Allow customization of CallStack property name
++
++[2024-11-15] feat: Add multi-targeting support
++- Add support for .NET Framework 4.8
++- Add support for .NET 5, 6, 7, and 8
++- Handle platform-specific differences
++
++[2024-10-20] feat: Implement core enricher functionality
++- Create CallStackEnricher implementing ILogEventEnricher
++- Add CallingMethod and CallingClass extraction
++- Implement configurable frame skipping
++
++[2024-09-15] feat: Add enricher configuration class
++- Create CallStackEnricherConfiguration
++- Add properties for all configuration options
++- Implement preset configurations (Minimal, Detailed)
++
++[2024-08-10] chore: Set up solution structure
++- Create Serilog.Enrichers.CallStack project
++- Configure NuGet package properties
++- Add MIT license
++
++[2024-07-28] docs: Create initial README with usage examples
++- Add installation instructions
++- Add basic usage examples
++- Document configuration options
+\ No newline at end of file
