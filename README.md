@@ -287,10 +287,35 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Changelog
 
-### Version 1.0.0
-- Initial release
-- Core call stack enrichment functionality
-- Comprehensive configuration options
-- Full test coverage
-- Documentation and examples
-- Performance optimizations for high-throughput scenarios
+### Version 1.0.22 (2025-07-28)
+- **NuGet Publishing**: Added automatic NuGet publishing workflow
+- **CI/CD**: GitHub Actions integration for automated builds and publishing
+
+### Version 1.0.20 (2025-07-28)
+- **Stability**: Resolved failing tests by improving frame detection and test expectations
+- **Bug Fix**: Removed InMemorySink.Clear() call that caused compilation error
+- **Documentation**: Updated project status to stable
+
+### Version 1.0.17 (2025-07-28)
+- **Release**: Prepared v1.0.0 release candidate
+- **Testing**: Improved test stability and isolation
+- **Performance**: Enhanced stack trace frame processing optimization
+
+### Version 1.0.13 (2025-07-28)
+- **Documentation**: Enhanced README with performance optimization notes
+- **Filtering**: Improved namespace filtering documentation and functionality
+
+### Version 1.0.9 (2025-07-28)
+- **Performance**: Optimized stack trace frame processing for high-throughput scenarios
+- **Testing**: Enhanced testing framework and utilities
+- **Core Features**: Improved CallStackEnricher exception handling
+
+### Version 1.0.4 (2025-07-28)
+- **Configuration**: Enhanced CallStackEnricherConfiguration fluent API
+- **Core Functionality**: Implemented core call stack enrichment functionality
+
+### Version 1.0.1 (2025-07-28)
+- **Initial Release**: Project setup and solution structure
+- **Core Features**: Basic call stack enrichment functionality
+- **Configuration**: Comprehensive configuration options
+- **Documentation**: Complete documentation and examples
