@@ -12,16 +12,17 @@
     
     <!-- Package Metadata -->
     <Authors>Michael Akinyemi</Authors>
-    <Company>Michael Akinyemi</Company>
+    <Company>Codekage</Company>
     <Product>Serilog CallStack Enricher</Product>
-    <Description>A Serilog enricher that adds call stack information to log events, including method names, file names, and line numbers. Helps with debugging and tracing by providing detailed context about where log events originated.</Description>
-    <PackageTags>serilog;enricher;callstack;logging;diagnostics;debugging;tracing</PackageTags>
+    <Description>A Serilog enricher that adds call stack information to log events in an exception-like format. Displays call stacks as: Method:Line --> Method:Line --> Method:Line for intuitive debugging and tracing.</Description>
+    <PackageTags>serilog;enricher;callstack;logging;diagnostics;debugging;tracing;exception-format;stack-trace</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageIcon>serilog_icon.png</PackageIcon>
     <PackageProjectUrl>https://github.com/hokagedami/serilog-stacktrace-enricher</PackageProjectUrl>
     <RepositoryUrl>https://github.com/hokagedami/serilog-stacktrace-enricher</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageReleaseNotes>Production ready release with comprehensive call stack enrichment functionality.</PackageReleaseNotes>
+    <PackageReleaseNotes>Major feature release: Exception-like call stack format with single CallStack property, configurable depth, and backward compatibility with legacy format.</PackageReleaseNotes>
     
     <!-- Build Configuration -->
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
@@ -39,6 +40,7 @@
   <ItemGroup>
     <None Include="..\README.md" Pack="true" PackagePath="\" />
     <None Include="..\LICENSE" Pack="true" PackagePath="\" />
+    <None Include="serilog_icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

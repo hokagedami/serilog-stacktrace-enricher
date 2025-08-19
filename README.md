@@ -1,19 +1,19 @@
 # Serilog.Enrichers.CallStack
 
-A Serilog enricher that adds call stack information to log events, including method names, file names, and line numbers. This enricher helps with debugging and tracing by providing detailed context about where log events originated.
+A Serilog enricher that adds call stack information to log events in an exception-like format. This enricher helps with debugging and tracing by providing detailed context about where log events originated, displaying the call stack in an intuitive format similar to exception stack traces.
 
 ## Features
 
-- **Method Names**: Capture the calling method name with optional parameter information
-- **Type Names**: Include the declaring type name (class/struct) with optional namespace
-- **File Information**: Add source file names with optional full paths
-- **Line Numbers**: Include source code line numbers for precise location tracking
-- **Column Numbers**: Optional column number information
-- **Assembly Names**: Include assembly information when needed
-- **Flexible Configuration**: Extensive configuration options for customization
-- **Exception Handling**: Configurable exception handling to prevent logging failures
+- **Exception-like Format**: Display call stack in familiar format: `Method:Line --> Method:Line --> Method:Line`
+- **Single Property**: Consolidates call stack into one `CallStack` property for cleaner logs
+- **Configurable Depth**: Control the number of frames to include (default: 5)
+- **Method Parameters**: Optional parameter information in method names
+- **Type Information**: Include declaring type names with optional namespace
+- **Line Numbers**: Precise source code line numbers for exact location tracking
+- **Backward Compatibility**: Legacy format with individual properties still available
 - **Frame Filtering**: Skip specific namespaces or types when walking the call stack
-- **Frame Offset**: Choose which frame in the call stack to capture
+- **Exception Handling**: Configurable exception handling to prevent logging failures
+- **Flexible Configuration**: Extensive configuration options for customization
 
 ## Installation
 
@@ -39,24 +39,60 @@ logger.Information("Hello, world!");
 
 This will produce log output similar to:
 ```
-[15:30:45 INF] Hello, world! {MethodName="Main", TypeName="Program", FileName="Program.cs", LineNumber=12}
+[15:30:45 INF] Hello, world! {CallStack="Program.Main:12 --> Program.<Main>$:8"}
 ```
 
-### With Configuration
+### Exception-like Format (Default)
 
 ```csharp
 var logger = new LoggerConfiguration()
     .Enrich.WithCallStack(config => config
-        .WithIncludes(methodName: true, typeName: true, fileName: true, lineNumber: true)
-        .WithFullNames(fullTypeName: true)
+        .WithCallStackFormat(useExceptionLikeFormat: true, maxFrames: 3)
         .WithMethodParameters(includeParameters: true)
+        .WithFullNames(fullTypeName: false)
         .SkipNamespace("System")
         .SkipNamespace("Microsoft"))
+    .WriteTo.Console(outputTemplate: 
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} | {CallStack}{NewLine}{Exception}")
+    .CreateLogger();
+```
+
+### Legacy Format
+
+```csharp
+var logger = new LoggerConfiguration()
+    .Enrich.WithCallStack(config => config
+        .WithCallStackFormat(useExceptionLikeFormat: false) // Use individual properties
+        .WithIncludes(methodName: true, typeName: true, fileName: true, lineNumber: true)
+        .WithFullNames(fullTypeName: true)
+        .WithMethodParameters(includeParameters: true))
     .WriteTo.Console()
     .CreateLogger();
 ```
 
 ## Configuration Options
+
+### Call Stack Format
+
+Choose between the new exception-like format or legacy individual properties:
+
+```csharp
+var config = new CallStackEnricherConfiguration()
+    .WithCallStackFormat(
+        useExceptionLikeFormat: true,    // Default: true
+        maxFrames: 5,                    // Default: 5, -1 for unlimited
+        callStackPropertyName: "CallStack"); // Default: "CallStack"
+```
+
+**Exception-like Format Output:**
+```
+CallStack: "UserService.ProcessUser:45 --> UserController.CreateUser:23 --> Program.Main:12"
+```
+
+**Legacy Format Output:**
+```
+MethodName: "ProcessUser", TypeName: "UserService", FileName: "UserService.cs", LineNumber: 45
+```
 
 ### Include/Exclude Information
 
@@ -198,11 +234,21 @@ var config = new CallStackEnricherConfiguration()
 
 ## Integration with Different Sinks
 
-### Console Output
+### Console Output with Exception-like Format
 
 ```csharp
 var logger = new LoggerConfiguration()
     .Enrich.WithCallStack()
+    .WriteTo.Console(outputTemplate: 
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} | Call Stack: {CallStack}{NewLine}{Exception}")
+    .CreateLogger();
+```
+
+### Console Output with Legacy Format
+
+```csharp
+var logger = new LoggerConfiguration()
+    .Enrich.WithCallStack(config => config.WithCallStackFormat(useExceptionLikeFormat: false))
     .WriteTo.Console(outputTemplate: 
         "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} " +
         "({TypeName}.{MethodName} in {FileName}:{LineNumber}){NewLine}{Exception}")
@@ -248,11 +294,26 @@ For file names and line numbers to work properly, ensure your application is bui
 
 ## Example Output
 
-With full configuration, log events will include rich call stack information:
+### Exception-like Format (Default)
+
+With the new exception-like format, log events include a single CallStack property:
 
 ```json
 {
-  "@t": "2024-01-15T15:30:45.123Z",
+  "@t": "2025-07-29T00:30:45.123Z",
+  "@l": "Information",
+  "@m": "Processing user request",
+  "CallStack": "UserService.ProcessRequest(String userId, UserRequest request):45 --> UserController.CreateUser:23 --> Program.Main:12"
+}
+```
+
+### Legacy Format
+
+When using legacy format (`useExceptionLikeFormat: false`), individual properties are included:
+
+```json
+{
+  "@t": "2025-07-29T00:30:45.123Z",
   "@l": "Information",
   "@m": "Processing user request",
   "MethodName": "ProcessRequest(String userId, UserRequest request)",
@@ -266,11 +327,13 @@ With full configuration, log events will include rich call stack information:
 
 ## Best Practices
 
-1. **Use appropriate configuration for your environment**: Detailed information for development, minimal for production
-2. **Skip framework namespaces**: Focus on your application code by skipping system namespaces
-3. **Consider performance impact**: Call stack walking has overhead, especially with full configuration
-4. **Enable exception suppression in production**: Prevent logging failures from breaking your application
-5. **Use structured logging sinks**: JSON-based sinks work best with the additional properties
+1. **Use exception-like format for readability**: The default format provides intuitive call stack traces
+2. **Limit frame depth in production**: Use `maxFrames` to control overhead (default: 5 frames)
+3. **Skip framework namespaces**: Focus on your application code by skipping system namespaces
+4. **Consider performance impact**: Call stack walking has overhead, tune `maxFrames` accordingly
+5. **Enable exception suppression in production**: Prevent logging failures from breaking your application
+6. **Use structured logging sinks**: JSON-based sinks work best with the call stack properties
+7. **Choose appropriate format**: Exception-like for debugging, legacy for detailed property access
 
 ## Compatibility
 
@@ -286,6 +349,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Changelog
+
+### Version 1.0.24 (2025-07-29)
+- **Exception-like Format**: New default format displays call stack like exception traces
+- **Single CallStack Property**: Consolidates call stack into one property for cleaner logs
+- **Configurable Depth**: `MaxFrames` setting to limit call stack depth (default: 5)
+- **Backward Compatibility**: Legacy format still available via configuration
+- **Enhanced Configuration**: New `WithCallStackFormat()` method for format control
 
 ### Version 1.0.22 (2025-07-28)
 - **NuGet Publishing**: Added automatic NuGet publishing workflow
