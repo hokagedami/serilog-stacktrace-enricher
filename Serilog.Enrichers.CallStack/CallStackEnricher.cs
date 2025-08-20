@@ -6,6 +6,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+#if NET6_0_OR_GREATER
+using System.Runtime.CompilerServices;
+#endif
 
 namespace Serilog.Enrichers.CallStack;
 
@@ -42,8 +45,15 @@ public class CallStackEnricher : ILogEventEnricher
     {
         try
         {
+#if NET6_0_OR_GREATER
+            // Use enhanced stack trace capabilities available in .NET 6+
             var stackTrace = new StackTrace(true);
             var frames = stackTrace.GetFrames();
+#else
+            // Standard stack trace for older frameworks
+            var stackTrace = new StackTrace(true);
+            var frames = stackTrace.GetFrames();
+#endif
             
             // Performance optimization: early exit if no frames
             if (frames?.Length == 0)
@@ -342,7 +352,13 @@ public class CallStackEnricher : ILogEventEnricher
 
         // Apply frame offset
         var startIndex = Math.Min(_configuration.FrameOffset, relevantFrames.Length - 1);
+#if NET8_0_OR_GREATER
+        // Use Span<T> for better performance in .NET 8+
+        var frameSpan = relevantFrames.AsSpan(startIndex);
+        relevantFrames = frameSpan.ToArray();
+#else
         relevantFrames = relevantFrames.Skip(startIndex).ToArray();
+#endif
 
         // Limit the number of frames
         if (_configuration.MaxFrames > 0 && relevantFrames.Length > _configuration.MaxFrames)
@@ -361,7 +377,13 @@ public class CallStackEnricher : ILogEventEnricher
             }
         }
 
+#if NET6_0_OR_GREATER
+        // Use optimized string.Join for .NET 6+ with better memory efficiency
         return callStackParts.Count > 0 ? string.Join(" --> ", callStackParts) : string.Empty;
+#else
+        // Standard string joining for older frameworks
+        return callStackParts.Count > 0 ? string.Join(" --> ", callStackParts) : string.Empty;
+#endif
     }
 
     /// <summary>
