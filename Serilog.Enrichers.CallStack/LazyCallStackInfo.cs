@@ -246,7 +246,7 @@ internal static class CallStackBuilder
 
     private static string GetMethodName(System.Reflection.MethodBase method, CallStackEnricherConfiguration configuration)
     {
-        if (!configuration.IncludeParameters)
+        if (!configuration.IncludeMethodParameters)
             return method.Name;
 
         var parameters = method.GetParameters();
@@ -280,7 +280,7 @@ internal static class CallStackBuilder
         if (typeName.StartsWith("Serilog.", StringComparison.Ordinal))
             return true;
 
-        foreach (var ns in configuration.NamespacesToSkip)
+        foreach (var ns in configuration.SkipNamespaces)
         {
             if (typeName.StartsWith(ns, StringComparison.Ordinal))
                 return true;

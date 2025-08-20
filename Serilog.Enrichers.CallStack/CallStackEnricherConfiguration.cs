@@ -151,6 +151,20 @@ public class CallStackEnricherConfiguration
     public ICollection<string> SkipNamespaces { get; } = new HashSet<string>(StringComparer.Ordinal);
 
     /// <summary>
+    /// Gets or sets whether to use async-aware call stack processing.
+    /// When true, filters out async state machine frames and shows original method names.
+    /// Default is true.
+    /// </summary>
+    public bool UseAsyncAwareMode { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether to filter out async state machine noise.
+    /// When true, removes internal async state machine frames for cleaner output.
+    /// Default is true.
+    /// </summary>
+    public bool FilterAsyncNoise { get; set; } = true;
+
+    /// <summary>
     /// Gets the collection of type names to skip when walking the stack trace.
     /// </summary>
     public ICollection<string> SkipTypes { get; } = new HashSet<string>(StringComparer.Ordinal);
@@ -318,6 +332,21 @@ public class CallStackEnricherConfiguration
         MaxFrames = maxFrames;
         if (!string.IsNullOrEmpty(callStackPropertyName))
             CallStackPropertyName = callStackPropertyName;
+        return this;
+    }
+
+    /// <summary>
+    /// Configures async-aware call stack processing.
+    /// </summary>
+    /// <param name="useAsyncAwareMode">Whether to use async-aware processing.</param>
+    /// <param name="filterAsyncNoise">Whether to filter out async state machine frames.</param>
+    /// <returns>This configuration instance for method chaining.</returns>
+    public CallStackEnricherConfiguration WithAsyncSupport(
+        bool useAsyncAwareMode = true,
+        bool filterAsyncNoise = true)
+    {
+        UseAsyncAwareMode = useAsyncAwareMode;
+        FilterAsyncNoise = filterAsyncNoise;
         return this;
     }
 }
