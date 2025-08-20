@@ -272,6 +272,48 @@ With full configuration, log events will include rich call stack information:
 4. **Enable exception suppression in production**: Prevent logging failures from breaking your application
 5. **Use structured logging sinks**: JSON-based sinks work best with the additional properties
 
+## Performance Optimizations
+
+This enricher includes several performance optimizations to minimize impact on your application:
+
+### Caching System
+- **Reflection Results Caching**: Method and type information is cached to avoid repeated reflection calls
+- **Thread-Safe Design**: All caches use concurrent collections for multi-threaded environments
+- **Automatic Memory Management**: Caches have reasonable size limits to prevent memory bloat
+
+### String Operations
+- **StringBuilder Pooling**: Reusable StringBuilder instances reduce memory allocations
+- **Optimized String Building**: Efficient concatenation for call stack formatting
+- **Memory Efficient**: Pool management prevents excessive memory usage
+
+### Lazy Evaluation
+- **Deferred Computation**: Call stacks are only built when actually serialized to output
+- **Smart Frame Capture**: Stack frames are captured lazily to avoid unnecessary work
+- **Conditional Processing**: Only processes call stacks when logging level/filters require it
+
+### Async-Friendly Processing
+- **State Machine Detection**: Automatically detects and filters async state machine frames
+- **Original Method Recovery**: Shows actual method names instead of compiler-generated ones
+- **Cleaner Output**: Removes async noise for more readable call stacks
+
+### Framework-Specific Optimizations
+- **.NET 6.0+**: Enhanced string operations and improved stack trace capabilities
+- **.NET 8.0+**: Span<T> optimizations for zero-allocation processing where possible
+- **Conditional Compilation**: Different code paths for optimal performance per framework
+
+### Performance Configuration
+
+```csharp
+// Optimize for high-throughput scenarios
+Log.Logger = new LoggerConfiguration()
+    .Enrich.WithCallStack(config => config
+        .WithCallStackFormat(maxFrames: 3)  // Limit frames for better performance
+        .WithAsyncSupport(filterAsyncNoise: true)  // Clean async output
+        .SkipNamespace("System")  // Skip system namespaces
+        .SkipNamespace("Microsoft"))  // Skip framework code
+    .CreateLogger();
+```
+
 ## Compatibility
 
 This package supports multiple target frameworks with optimizations for newer runtimes:
