@@ -45,35 +45,19 @@ public class CallStackEnricher : ILogEventEnricher
     {
         try
         {
-#if NET6_0_OR_GREATER
-            // Use enhanced stack trace capabilities available in .NET 6+
-            var stackTrace = new StackTrace(true);
-            var frames = stackTrace.GetFrames();
-#else
-            // Standard stack trace for older frameworks
-            var stackTrace = new StackTrace(true);
-            var frames = stackTrace.GetFrames();
-#endif
-            
-            // Performance optimization: early exit if no frames
-            if (frames?.Length == 0)
-                return;
-            
-            if (frames == null || frames.Length == 0)
-                return;
+            // Use lazy evaluation for better performance - only capture stack when needed
+            var lazyCallStack = new LazyCallStackInfo(_configuration);
 
             if (_configuration.UseExceptionLikeFormat)
             {
-                var callStackString = BuildCallStackString(frames);
-                if (!string.IsNullOrEmpty(callStackString))
-                {
-                    var property = propertyFactory.CreateProperty(_configuration.CallStackPropertyName, callStackString);
-                    logEvent.AddPropertyIfAbsent(property);
-                }
+                // Create a lazy property that only builds the call stack string when serialized
+                var lazyProperty = new LazyLogProperty(_configuration.CallStackPropertyName, () => lazyCallStack.CallStackString);
+                var property = propertyFactory.CreateProperty(_configuration.CallStackPropertyName, lazyProperty);
+                logEvent.AddPropertyIfAbsent(property);
             }
             else
             {
-                var relevantFrame = FindRelevantFrame(frames);
+                var relevantFrame = lazyCallStack.GetRelevantFrame();
                 if (relevantFrame == null)
                     return;
 
