@@ -366,24 +366,24 @@ public class CallStackEnricher : ILogEventEnricher
             relevantFrames = relevantFrames.Take(_configuration.MaxFrames).ToArray();
         }
 
-        var callStackParts = new List<string>();
-        
-        foreach (var frame in relevantFrames)
+        // Use StringBuilder pool for efficient string building
+        return StringBuilderPool.GetStringAndReturn(sb =>
         {
-            var frameString = FormatStackFrame(frame);
-            if (!string.IsNullOrEmpty(frameString))
+            var isFirst = true;
+            foreach (var frame in relevantFrames)
             {
-                callStackParts.Add(frameString);
+                var frameString = FormatStackFrame(frame);
+                if (!string.IsNullOrEmpty(frameString))
+                {
+                    if (!isFirst)
+                    {
+                        sb.Append(" --> ");
+                    }
+                    sb.Append(frameString);
+                    isFirst = false;
+                }
             }
-        }
-
-#if NET6_0_OR_GREATER
-        // Use optimized string.Join for .NET 6+ with better memory efficiency
-        return callStackParts.Count > 0 ? string.Join(" --> ", callStackParts) : string.Empty;
-#else
-        // Standard string joining for older frameworks
-        return callStackParts.Count > 0 ? string.Join(" --> ", callStackParts) : string.Empty;
-#endif
+        });
     }
 
     /// <summary>
@@ -402,39 +402,39 @@ public class CallStackEnricher : ILogEventEnricher
         if (!cachedInfo.IsValid)
             return string.Empty;
 
-        var parts = new List<string>();
+        // Use StringBuilder pool for efficient string formatting
+        return StringBuilderPool.GetStringAndReturn(sb =>
+        {
+            var hasContent = false;
 
-        // Add type and method name using cached values
-        if (_configuration.IncludeTypeName)
-        {
-            var typeName = _configuration.UseFullTypeName 
-                ? cachedInfo.TypeName
-                : GetShortTypeName(cachedInfo.TypeName);
-            
-            var methodName = GetMethodName(method);
-            parts.Add($"{typeName}.{methodName}");
-        }
-        else if (_configuration.IncludeMethodName)
-        {
-            var methodName = GetMethodName(method);
-            parts.Add(methodName);
-        }
-
-        // Add line number if available and configured
-        if (_configuration.IncludeLineNumber)
-        {
-            var lineNumber = frame.GetFileLineNumber();
-            if (lineNumber > 0)
+            // Add type and method name using cached values
+            if (_configuration.IncludeTypeName)
             {
-                var lastPart = parts.LastOrDefault();
-                if (!string.IsNullOrEmpty(lastPart))
+                var typeName = _configuration.UseFullTypeName 
+                    ? cachedInfo.TypeName
+                    : GetShortTypeName(cachedInfo.TypeName);
+                
+                var methodName = GetMethodName(method);
+                sb.Append(typeName).Append('.').Append(methodName);
+                hasContent = true;
+            }
+            else if (_configuration.IncludeMethodName)
+            {
+                var methodName = GetMethodName(method);
+                sb.Append(methodName);
+                hasContent = true;
+            }
+
+            // Add line number if available and configured
+            if (_configuration.IncludeLineNumber && hasContent)
+            {
+                var lineNumber = frame.GetFileLineNumber();
+                if (lineNumber > 0)
                 {
-                    parts[parts.Count - 1] = $"{lastPart}:{lineNumber}";
+                    sb.Append(':').Append(lineNumber);
                 }
             }
-        }
-
-        return parts.Count > 0 ? string.Join(" ", parts) : string.Empty;
+        });
     }
 
     /// <summary>
