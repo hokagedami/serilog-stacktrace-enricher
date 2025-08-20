@@ -274,8 +274,20 @@ With full configuration, log events will include rich call stack information:
 
 ## Compatibility
 
-- **.NET Standard 2.0+**: Compatible with .NET Framework 4.6.1+, .NET Core 2.0+, .NET 5+
+This package supports multiple target frameworks with optimizations for newer runtimes:
+
+- **.NET Standard 2.0**: Universal compatibility with .NET Framework 4.6.1+, .NET Core 2.0+
+- **.NET Framework 4.8**: Enhanced support for legacy .NET Framework applications
+- **.NET 6.0**: Modern .NET with improved performance and features
+- **.NET 7.0**: Latest performance optimizations and runtime improvements  
+- **.NET 8.0**: Cutting-edge features with Span<T> optimizations and enhanced performance
 - **Serilog 3.0+**: Requires Serilog version 3.0 or higher
+
+### Runtime-Specific Features
+
+- **.NET 6.0+**: Enhanced stack trace capabilities and improved string operations
+- **.NET 8.0+**: Span<T> optimizations for better memory efficiency
+- **All frameworks**: Full backward compatibility maintained
 
 ## License
 
