@@ -397,14 +397,19 @@ public class CallStackEnricher : ILogEventEnricher
         if (method == null)
             return string.Empty;
 
+        // Use cached method information for better performance
+        var cachedInfo = MethodInfoCache.GetMethodInfo(method);
+        if (!cachedInfo.IsValid)
+            return string.Empty;
+
         var parts = new List<string>();
 
-        // Add type and method name
-        if (_configuration.IncludeTypeName && method.DeclaringType != null)
+        // Add type and method name using cached values
+        if (_configuration.IncludeTypeName)
         {
             var typeName = _configuration.UseFullTypeName 
-                ? method.DeclaringType.FullName ?? method.DeclaringType.Name
-                : method.DeclaringType.Name;
+                ? cachedInfo.TypeName
+                : GetShortTypeName(cachedInfo.TypeName);
             
             var methodName = GetMethodName(method);
             parts.Add($"{typeName}.{methodName}");
@@ -430,5 +435,19 @@ public class CallStackEnricher : ILogEventEnricher
         }
 
         return parts.Count > 0 ? string.Join(" ", parts) : string.Empty;
+    }
+
+    /// <summary>
+    /// Extracts the short type name from a full type name.
+    /// </summary>
+    /// <param name="fullTypeName">The full type name.</param>
+    /// <returns>The short type name without namespace.</returns>
+    private static string GetShortTypeName(string fullTypeName)
+    {
+        if (string.IsNullOrEmpty(fullTypeName))
+            return fullTypeName;
+
+        var lastDotIndex = fullTypeName.LastIndexOf('.');
+        return lastDotIndex >= 0 ? fullTypeName.Substring(lastDotIndex + 1) : fullTypeName;
     }
 }
