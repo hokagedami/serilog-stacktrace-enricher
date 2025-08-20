@@ -45,35 +45,19 @@ public class CallStackEnricher : ILogEventEnricher
     {
         try
         {
-#if NET6_0_OR_GREATER
-            // Use enhanced stack trace capabilities available in .NET 6+
-            var stackTrace = new StackTrace(true);
-            var frames = stackTrace.GetFrames();
-#else
-            // Standard stack trace for older frameworks
-            var stackTrace = new StackTrace(true);
-            var frames = stackTrace.GetFrames();
-#endif
-            
-            // Performance optimization: early exit if no frames
-            if (frames?.Length == 0)
-                return;
-            
-            if (frames == null || frames.Length == 0)
-                return;
+            // Use lazy evaluation for better performance - only capture stack when needed
+            var lazyCallStack = new LazyCallStackInfo(_configuration);
 
             if (_configuration.UseExceptionLikeFormat)
             {
-                var callStackString = BuildCallStackString(frames);
-                if (!string.IsNullOrEmpty(callStackString))
-                {
-                    var property = propertyFactory.CreateProperty(_configuration.CallStackPropertyName, callStackString);
-                    logEvent.AddPropertyIfAbsent(property);
-                }
+                // Create a lazy property that only builds the call stack string when serialized
+                var lazyProperty = new LazyLogProperty(_configuration.CallStackPropertyName, () => lazyCallStack.CallStackString);
+                var property = propertyFactory.CreateProperty(_configuration.CallStackPropertyName, lazyProperty);
+                logEvent.AddPropertyIfAbsent(property);
             }
             else
             {
-                var relevantFrame = FindRelevantFrame(frames);
+                var relevantFrame = lazyCallStack.GetRelevantFrame();
                 if (relevantFrame == null)
                     return;
 
@@ -366,24 +350,24 @@ public class CallStackEnricher : ILogEventEnricher
             relevantFrames = relevantFrames.Take(_configuration.MaxFrames).ToArray();
         }
 
-        var callStackParts = new List<string>();
-        
-        foreach (var frame in relevantFrames)
+        // Use StringBuilder pool for efficient string building
+        return StringBuilderPool.GetStringAndReturn(sb =>
         {
-            var frameString = FormatStackFrame(frame);
-            if (!string.IsNullOrEmpty(frameString))
+            var isFirst = true;
+            foreach (var frame in relevantFrames)
             {
-                callStackParts.Add(frameString);
+                var frameString = FormatStackFrame(frame);
+                if (!string.IsNullOrEmpty(frameString))
+                {
+                    if (!isFirst)
+                    {
+                        sb.Append(" --> ");
+                    }
+                    sb.Append(frameString);
+                    isFirst = false;
+                }
             }
-        }
-
-#if NET6_0_OR_GREATER
-        // Use optimized string.Join for .NET 6+ with better memory efficiency
-        return callStackParts.Count > 0 ? string.Join(" --> ", callStackParts) : string.Empty;
-#else
-        // Standard string joining for older frameworks
-        return callStackParts.Count > 0 ? string.Join(" --> ", callStackParts) : string.Empty;
-#endif
+        });
     }
 
     /// <summary>
@@ -397,38 +381,57 @@ public class CallStackEnricher : ILogEventEnricher
         if (method == null)
             return string.Empty;
 
-        var parts = new List<string>();
+        // Use cached method information for better performance
+        var cachedInfo = MethodInfoCache.GetMethodInfo(method);
+        if (!cachedInfo.IsValid)
+            return string.Empty;
 
-        // Add type and method name
-        if (_configuration.IncludeTypeName && method.DeclaringType != null)
+        // Use StringBuilder pool for efficient string formatting
+        return StringBuilderPool.GetStringAndReturn(sb =>
         {
-            var typeName = _configuration.UseFullTypeName 
-                ? method.DeclaringType.FullName ?? method.DeclaringType.Name
-                : method.DeclaringType.Name;
-            
-            var methodName = GetMethodName(method);
-            parts.Add($"{typeName}.{methodName}");
-        }
-        else if (_configuration.IncludeMethodName)
-        {
-            var methodName = GetMethodName(method);
-            parts.Add(methodName);
-        }
+            var hasContent = false;
 
-        // Add line number if available and configured
-        if (_configuration.IncludeLineNumber)
-        {
-            var lineNumber = frame.GetFileLineNumber();
-            if (lineNumber > 0)
+            // Add type and method name using cached values
+            if (_configuration.IncludeTypeName)
             {
-                var lastPart = parts.LastOrDefault();
-                if (!string.IsNullOrEmpty(lastPart))
+                var typeName = _configuration.UseFullTypeName 
+                    ? cachedInfo.TypeName
+                    : GetShortTypeName(cachedInfo.TypeName);
+                
+                var methodName = GetMethodName(method);
+                sb.Append(typeName).Append('.').Append(methodName);
+                hasContent = true;
+            }
+            else if (_configuration.IncludeMethodName)
+            {
+                var methodName = GetMethodName(method);
+                sb.Append(methodName);
+                hasContent = true;
+            }
+
+            // Add line number if available and configured
+            if (_configuration.IncludeLineNumber && hasContent)
+            {
+                var lineNumber = frame.GetFileLineNumber();
+                if (lineNumber > 0)
                 {
-                    parts[parts.Count - 1] = $"{lastPart}:{lineNumber}";
+                    sb.Append(':').Append(lineNumber);
                 }
             }
-        }
+        });
+    }
 
-        return parts.Count > 0 ? string.Join(" ", parts) : string.Empty;
+    /// <summary>
+    /// Extracts the short type name from a full type name.
+    /// </summary>
+    /// <param name="fullTypeName">The full type name.</param>
+    /// <returns>The short type name without namespace.</returns>
+    private static string GetShortTypeName(string fullTypeName)
+    {
+        if (string.IsNullOrEmpty(fullTypeName))
+            return fullTypeName;
+
+        var lastDotIndex = fullTypeName.LastIndexOf('.');
+        return lastDotIndex >= 0 ? fullTypeName.Substring(lastDotIndex + 1) : fullTypeName;
     }
 }
